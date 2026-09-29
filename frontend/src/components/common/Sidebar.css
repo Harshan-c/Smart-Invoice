@@ -1,0 +1,171 @@
+
+.sidebar {
+  width: 220px;
+  min-height: 100vh;
+
+  background: #152238;
+  color: white;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 20px 12px;
+
+  box-sizing: border-box;
+
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  z-index: 100;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 0 8px 24px;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 42px;
+
+  background: white;
+  color: #2563eb;
+
+  border-radius: 7px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 22px;
+}
+
+.sidebar-brand h1 {
+  margin: 0;
+
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.sidebar-brand p {
+  margin: 2px 0 0;
+
+  font-size: 11px;
+  color: #aebbd0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  min-height: 43px;
+
+  padding: 0 13px;
+
+  border-radius: 9px;
+
+  color: #d3dbea;
+
+  text-decoration: none;
+
+  font-size: 14px;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.sidebar-link.active {
+  background: #3478ee;
+  color: white;
+
+  box-shadow:
+    0 5px 15px rgba(52, 120, 238, 0.25);
+}
+
+.sidebar-icon {
+  width: 20px;
+
+  display: flex;
+  justify-content: center;
+
+  font-size: 17px;
+}
+
+.sidebar-bottom-card {
+  margin-top: auto;
+
+  margin-bottom: 4px;
+
+  min-height: 145px;
+
+  border-radius: 11px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1e3049,
+      #17263b
+    );
+
+  border: 1px solid rgba(
+    255,
+    255,
+    255,
+    0.07
+  );
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+}
+
+.sidebar-bottom-icon {
+  font-size: 25px;
+
+  margin-bottom: 8px;
+
+  opacity: 0.75;
+}
+
+.sidebar-bottom-card p {
+  margin: 0;
+
+  color: #d6dfed;
+
+  font-size: 11px;
+
+  line-height: 1.5;
+}
+
+.sidebar-bottom-line {
+  margin-top: 10px;
+
+  color: white;
+
+  font-size: 13px;
+}

@@ -1,0 +1,247 @@
+.payment-page {
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto;
+  padding-bottom: 30px;
+  color: #172033;
+}
+
+.payment-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.payment-page-header h1 {
+  margin: 8px 0 5px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.payment-page-header p {
+  margin: 0;
+  color: #7d8ba3;
+  font-size: 13px;
+}
+
+.payment-back-link {
+  color: #3478ee;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.payment-back-link:hover {
+  text-decoration: underline;
+}
+
+.payment-invoice-number {
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: #eef4ff;
+  color: #3478ee;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payment-card {
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(23, 32, 51, 0.03);
+}
+
+.payment-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.payment-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #eef4ff;
+  color: #3478ee;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.payment-card-header h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.payment-card-header p {
+  margin: 0;
+  color: #8491a5;
+  font-size: 12px;
+}
+
+.payment-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 24px 0;
+}
+
+.payment-field {
+  min-width: 0;
+}
+
+.payment-field-wide {
+  grid-column: 1 / -1;
+}
+
+.payment-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: #65738a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.payment-field input,
+.payment-field select {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #dce3ed;
+  border-radius: 7px;
+  background: #fbfcfe;
+  color: #172033;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.payment-field input::placeholder {
+  color: #9aa7ba;
+}
+
+.payment-field input:focus,
+.payment-field select:focus {
+  border-color: #4f83ee;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 131, 238, 0.1);
+}
+
+.payment-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: #f6f8fc;
+  color: #65738a;
+  font-size: 13px;
+}
+
+.payment-info span {
+  color: #172033;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.payment-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.payment-cancel-button,
+.payment-save-button {
+  min-height: 40px;
+  padding: 0 17px;
+  box-sizing: border-box;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.payment-cancel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dce3ed;
+  background: #ffffff;
+  color: #65738a;
+  text-decoration: none;
+}
+
+.payment-cancel-button:hover {
+  background: #f6f8fc;
+}
+
+.payment-save-button {
+  border: none;
+  background: #3478ee;
+  color: #ffffff;
+}
+
+.payment-save-button:hover:not(:disabled) {
+  background: #2868d8;
+  box-shadow: 0 4px 12px rgba(52, 120, 238, 0.2);
+}
+
+.payment-save-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.payment-success {
+  margin-top: 15px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #eef8f3;
+  color: #168457;
+  font-size: 12px;
+}
+
+.payment-error {
+  margin-top: 15px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fff1f1;
+  color: #c63d3d;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+
+  .payment-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .payment-form {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-field-wide {
+    grid-column: auto;
+  }
+
+  .payment-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .payment-cancel-button,
+  .payment-save-button {
+    width: 100%;
+  }
+}

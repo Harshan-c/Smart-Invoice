@@ -1,0 +1,486 @@
+/* =========================================
+   Invoice Details Page
+========================================= */
+
+.invoice-details-page {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+/* =========================================
+   Header
+========================================= */
+
+.invoice-details-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.invoice-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.invoice-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  width: fit-content;
+
+  padding: 8px 13px;
+
+  border: 1px solid #dce5f2;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #536176;
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.invoice-back-button span {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.invoice-back-button:hover {
+  background: #f4f7fb;
+  border-color: #c9d6e8;
+  color: #3478ee;
+  transform: translateX(-2px);
+}
+
+
+.invoice-title-section h1 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.invoice-title-section p {
+  margin: 8px 0 0;
+
+  color: #68758a;
+
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+/* =========================================
+   Invoice Number
+========================================= */
+
+.invoice-number-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  padding: 11px 16px;
+
+  border: 1px solid #dce5f2;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  min-width: 125px;
+}
+
+.invoice-number-badge span {
+  margin-bottom: 3px;
+
+  color: #8793a6;
+
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.invoice-number-badge strong {
+  color: #172033;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+/* =========================================
+   Action Bar
+========================================= */
+
+.invoice-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 20px;
+  padding: 14px 16px;
+
+  border: 1px solid #e1e8f2;
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  box-shadow: 0 2px 8px rgba(23, 32, 51, 0.04);
+}
+
+.invoice-action-left {
+  display: flex;
+  align-items: center;
+}
+
+.invoice-action-label {
+  color: #68758a;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+
+/* =========================================
+   Action Buttons
+========================================= */
+
+.invoice-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.invoice-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 40px;
+
+  padding: 0 15px;
+
+  border-radius: 7px;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.invoice-action-button:hover {
+  transform: translateY(-1px);
+}
+
+.action-button-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+
+/* =========================================
+   Update Payment
+========================================= */
+
+.payment-action {
+  border: 1px solid #d4e2ff;
+
+  background: #eef4ff;
+  color: #3478ee;
+}
+
+.payment-action:hover {
+  background: #e4edff;
+  border-color: #bfd3ff;
+
+  box-shadow: 0 3px 8px rgba(52, 120, 238, 0.10);
+}
+
+
+/* =========================================
+   Print / Save PDF
+========================================= */
+
+.print-action {
+  border: 1px solid #d8e0ec;
+
+  background: #ffffff;
+  color: #3e4b60;
+}
+
+.print-action:hover {
+  background: #f5f8fc;
+  border-color: #c3cfdf;
+
+  box-shadow: 0 3px 8px rgba(23, 32, 51, 0.08);
+}
+
+
+/* =========================================
+   Delete
+========================================= */
+
+.delete-action {
+  border: 1px solid #f2caca;
+
+  background: #fff7f7;
+  color: #d64545;
+}
+
+.delete-action:hover {
+  background: #fff0f0;
+  border-color: #eab2b2;
+
+  box-shadow: 0 3px 8px rgba(214, 69, 69, 0.10);
+}
+
+
+/* =========================================
+   Delete Confirmation
+========================================= */
+
+.delete-confirmation {
+  margin-bottom: 20px;
+
+  padding: 18px;
+
+  border: 1px solid #f0cccc;
+  border-radius: 10px;
+
+  background: #fffafa;
+}
+
+.delete-confirmation-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.delete-confirmation-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  border-radius: 8px;
+
+  background: #fff0f0;
+
+  font-size: 17px;
+}
+
+.delete-confirmation-text h3 {
+  margin: 0 0 6px;
+
+  color: #172033;
+
+  font-size: 16px;
+}
+
+.delete-confirmation-text p {
+  margin: 4px 0;
+
+  color: #68758a;
+
+  font-size: 13px;
+}
+
+.delete-warning {
+  color: #d64545 !important;
+  font-weight: 600;
+}
+
+.delete-error {
+  margin-top: 13px;
+
+  padding: 10px 12px;
+
+  border-radius: 6px;
+
+  background: #fff0f0;
+
+  color: #c03939;
+
+  font-size: 12px;
+}
+
+.delete-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  gap: 9px;
+
+  margin-top: 16px;
+}
+
+.delete-cancel-button,
+.delete-confirm-button {
+  min-height: 38px;
+
+  padding: 0 15px;
+
+  border-radius: 7px;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.delete-cancel-button {
+  border: 1px solid #d8e0ec;
+
+  background: #ffffff;
+  color: #536176;
+}
+
+.delete-cancel-button:hover {
+  background: #f5f8fc;
+}
+
+.delete-confirm-button {
+  border: 1px solid #d64545;
+
+  background: #d64545;
+  color: #ffffff;
+}
+
+.delete-confirm-button:hover {
+  background: #bd3838;
+}
+
+.delete-cancel-button:disabled,
+.delete-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================
+   Preview
+========================================= */
+
+.invoice-details-preview {
+  width: 100%;
+}
+
+
+/* =========================================
+   Loading / Error
+========================================= */
+
+.invoice-details-loading {
+  padding: 40px;
+
+  color: #68758a;
+
+  text-align: center;
+}
+
+.invoice-details-error-card {
+  padding: 30px;
+
+  border: 1px solid #e1e8f2;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.invoice-details-error-card h1 {
+  margin-top: 0;
+  color: #172033;
+}
+
+.invoice-details-error-card p {
+  color: #68758a;
+}
+
+
+/* =========================================
+   Responsive
+========================================= */
+
+@media (max-width: 800px) {
+
+  .invoice-details-header {
+    flex-direction: column;
+  }
+
+  .invoice-number-badge {
+    align-items: flex-start;
+  }
+
+  .invoice-action-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .invoice-action-buttons {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+}
+
+
+@media (max-width: 560px) {
+
+  .invoice-title-section h1 {
+    font-size: 26px;
+  }
+
+  .invoice-action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .invoice-action-button {
+    width: 100%;
+  }
+
+  .delete-confirmation-actions {
+    flex-direction: column;
+  }
+
+  .delete-cancel-button,
+  .delete-confirm-button {
+    width: 100%;
+  }
+
+}

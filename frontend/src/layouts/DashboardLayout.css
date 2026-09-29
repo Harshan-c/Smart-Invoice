@@ -1,0 +1,47 @@
+.dashboard-layout {
+  width: 100%;
+  min-height: 100vh;
+
+  background: #f5f8fc;
+}
+
+.dashboard-main {
+  width: calc(100% - 220px);
+
+  margin-left: 220px;
+
+  min-height: 100vh;
+
+  background: #f5f8fc;
+
+  box-sizing: border-box;
+}
+
+.dashboard-content {
+  width: 100%;
+
+  padding: 26px 28px;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .dashboard-main {
+    width: 100%;
+
+    margin-left: 0;
+  }
+
+  .dashboard-content {
+    padding: 20px;
+  }
+
+}
+
+

@@ -484,3 +484,436 @@
   }
 
 }
+
+/* =========================================================
+   A4 INVOICE PRINTING
+   ========================================================= */
+
+@media print {
+
+  /* A4 paper */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  /* Remove browser default spacing */
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Hide everything by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only invoice */
+  #invoice-print-area,
+  #invoice-print-area * {
+    visibility: visible !important;
+  }
+
+  /* Position invoice at the top-left of the A4 page */
+  #invoice-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+
+    width: 210mm !important;
+    min-height: 297mm !important;
+
+    margin: 0 !important;
+    padding: 12mm !important;
+
+    box-sizing: border-box !important;
+
+    background: white !important;
+
+    overflow: visible !important;
+  }
+
+  /* Prevent the invoice container from adding unwanted
+     screen-layout spacing during printing */
+  .invoice-details-preview {
+    display: block !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Remove shadows that are useful on screen but not on paper */
+  #invoice-print-area,
+  #invoice-print-area * {
+    box-shadow: none !important;
+  }
+
+  /* Avoid unnecessary page breaks inside invoice sections */
+  #invoice-print-area table,
+  #invoice-print-area tr,
+  #invoice-print-area img,
+  #invoice-print-area .invoice-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep invoice header together */
+  #invoice-print-area .invoice-header {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Don't show links as URLs while printing */
+  #invoice-print-area a {
+    text-decoration: none !important;
+  }
+
+  #invoice-print-area a::after {
+    content: none !important;
+  }
+
+  /* Make sure colors/backgrounds are preserved */
+  #invoice-print-area {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* =========================================================
+   SAVE INVOICE BUTTON
+   ========================================================= */
+
+.invoice-form section:last-child .save-invoice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+  min-width: 150px;
+
+  padding: 0 20px;
+
+  background: #3478ee !important;
+  color: #ffffff !important;
+
+  border: none;
+  border-radius: 7px;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  line-height: 1;
+
+  cursor: pointer;
+
+  text-align: center;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.invoice-form section:last-child .save-invoice-button:hover {
+  background: #2868d8 !important;
+}
+
+.invoice-form section:last-child .save-invoice-button:disabled {
+  background: #8fb3f2 !important;
+  color: #ffffff !important;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   PURCHASE INVOICE CARD VIEW
+   ========================================================= */
+
+.purchase-invoice-details {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  margin-top: 24px;
+}
+
+
+/* =========================================================
+   DETAIL CARD
+   ========================================================= */
+
+.purchase-detail-card {
+  background: #ffffff;
+
+  border: 1px solid #dce3ed;
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+
+.purchase-detail-card-header {
+  padding: 18px 20px;
+
+  border-bottom: 1px solid #e5eaf1;
+
+  background: #f8fafc;
+}
+
+
+.purchase-detail-card-header h2 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+
+.purchase-detail-card-header p {
+  margin: 5px 0 0;
+
+  color: #6b778c;
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   DETAIL GRID
+   ========================================================= */
+
+.purchase-detail-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 0;
+
+  padding: 4px 0;
+}
+
+
+.purchase-vendor-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 0;
+
+  padding: 4px 0;
+}
+
+
+.purchase-detail-item {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  min-width: 0;
+
+  padding: 16px 20px;
+
+  border-bottom: 1px solid #edf1f5;
+}
+
+
+.purchase-detail-item span {
+  color: #7a8799;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+
+.purchase-detail-item strong {
+  color: #172033;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  word-break: break-word;
+}
+
+
+.purchase-detail-full {
+  grid-column: span 2;
+}
+
+
+/* =========================================================
+   PURCHASE ITEMS TABLE
+   ========================================================= */
+
+.purchase-items-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+
+.purchase-items-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  min-width: 800px;
+}
+
+
+.purchase-items-table th {
+  padding: 12px 14px;
+
+  background: #f8fafc;
+
+  border-bottom: 1px solid #dce3ed;
+
+  color: #64748b;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-align: left;
+
+  text-transform: uppercase;
+}
+
+
+.purchase-items-table td {
+  padding: 13px 14px;
+
+  border-bottom: 1px solid #edf1f5;
+
+  color: #334155;
+
+  font-size: 13px;
+}
+
+
+.purchase-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+.purchase-items-table tbody tr:hover {
+  background: #fafcff;
+}
+
+
+.purchase-items-empty {
+  padding: 30px !important;
+
+  text-align: center;
+
+  color: #8a96a8 !important;
+}
+
+
+/* =========================================================
+   PAYMENT + TOTAL
+   ========================================================= */
+
+.purchase-bottom-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 18px;
+}
+
+
+.purchase-payment-card,
+.purchase-total-card {
+  min-width: 0;
+}
+
+
+.purchase-grand-total {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 22px 20px;
+}
+
+
+.purchase-grand-total span {
+  color: #64748b;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+.purchase-grand-total strong {
+  color: #172033;
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .purchase-detail-grid,
+  .purchase-vendor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .purchase-detail-full {
+    grid-column: span 2;
+  }
+
+  .purchase-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .purchase-detail-grid,
+  .purchase-vendor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-detail-full {
+    grid-column: span 1;
+  }
+
+  .purchase-detail-item {
+    padding: 14px 16px;
+  }
+
+  .purchase-detail-card-header {
+    padding: 16px;
+  }
+
+  .purchase-grand-total {
+    padding: 20px 16px;
+  }
+
+  .purchase-grand-total strong {
+    font-size: 20px;
+  }
+
+}

@@ -1,13 +1,25 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getInvoices } from '../services/api'
 import './Invoices.css'
 
 function Invoices() {
   const [invoices, setInvoices] = useState([])
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const [activeType, setActiveType] = useState(
+    searchParams.get('type') === 'purchase'
+      ? 'purchase'
+      : 'sales'
+  )
+
   const [searchTerm, setSearchTerm] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [paymentFilter, setPaymentFilter] = useState('all')
+
+  const [salesPage, setSalesPage] = useState(1)
+  const [purchasePage, setPurchasePage] = useState(1)
+
+  const itemsPerPage = 10
 
   useEffect(() => {
     loadInvoices()
@@ -18,178 +30,153 @@ function Invoices() {
       const data = await getInvoices()
       setInvoices(data)
     } catch (error) {
-      console.error(error)
-      setError('Failed to load invoices.')
-    } finally {
-      setLoading(false)
+      console.error('Failed to load invoices:', error)
     }
   }
 
-  function formatCurrency(value) {
-    return `₹${Number(value || 0).toLocaleString('en-IN', {
+  const salesInvoices = useMemo(() => {
+    return invoices.filter(
+      invoice =>
+        invoice.recordType === 'sales' ||
+        (!invoice.recordType && invoice.customer)
+    )
+  }, [invoices])
+
+  const purchaseInvoices = useMemo(() => {
+    return invoices.filter(
+      invoice =>
+        invoice.recordType === 'purchase' ||
+        invoice.invoiceType === 'purchase'
+    )
+  }, [invoices])
+
+  const filteredSalesInvoices = useMemo(() => {
+    return salesInvoices.filter(invoice => {
+      const search = searchTerm.toLowerCase()
+
+      const matchesSearch =
+        String(invoice.invoiceNumber || '')
+          .toLowerCase()
+          .includes(search) ||
+        String(invoice.customer?.name || '')
+          .toLowerCase()
+          .includes(search)
+
+      const paymentStatus = String(
+        invoice.payment?.status || ''
+      ).toLowerCase()
+
+      const matchesPayment =
+        paymentFilter === 'all' ||
+        paymentStatus === paymentFilter.toLowerCase()
+
+      return matchesSearch && matchesPayment
+    })
+  }, [salesInvoices, searchTerm, paymentFilter])
+
+  const filteredPurchaseInvoices = useMemo(() => {
+    return purchaseInvoices.filter(invoice => {
+      const search = searchTerm.toLowerCase()
+
+      return (
+        String(invoice.invoiceNumber || '')
+          .toLowerCase()
+          .includes(search) ||
+        String(invoice.vendor?.name || '')
+          .toLowerCase()
+          .includes(search)
+      )
+    })
+  }, [purchaseInvoices, searchTerm])
+
+  const currentInvoices =
+    activeType === 'sales'
+      ? filteredSalesInvoices
+      : filteredPurchaseInvoices
+
+  const currentPage =
+    activeType === 'sales'
+      ? salesPage
+      : purchasePage
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(currentInvoices.length / itemsPerPage)
+  )
+
+  const startIndex =
+    (currentPage - 1) * itemsPerPage
+
+  const paginatedInvoices = currentInvoices.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  )
+
+  const totalValue = invoices.reduce(
+    (sum, invoice) =>
+      sum + Number(invoice.totals?.grandTotal || 0),
+    0
+  )
+
+  const paidInvoices = salesInvoices.filter(
+    invoice =>
+      String(invoice.payment?.status || '').toLowerCase() ===
+      'paid'
+  )
+
+  function changeType(type) {
+    setActiveType(type)
+
+    setSearchParams({
+      type
+    })
+
+    setSearchTerm('')
+    setPaymentFilter('all')
+  }
+
+  function handlePageChange(page) {
+    if (activeType === 'sales') {
+      setSalesPage(page)
+    } else {
+      setPurchasePage(page)
+    }
+  }
+
+  function formatAmount(amount) {
+    return `₹${Number(amount || 0).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`
   }
 
-  function formatDate(value) {
-    if (!value) {
-      return '--'
+  function formatDate(date) {
+    if (!date) return '-'
+
+    const parsedDate = new Date(date)
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return date
     }
 
-    const date = new Date(`${value}T00:00:00`)
-
-    return date.toLocaleDateString('en-IN', {
+    return parsedDate.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     })
   }
 
-  function getStatusClass(status) {
-    const normalizedStatus = String(status || '').toLowerCase()
-
-    if (normalizedStatus === 'paid') {
-      return 'status-paid'
-    }
-
-    if (normalizedStatus === 'pending') {
-      return 'status-pending'
-    }
-
-    if (normalizedStatus === 'overdue') {
-      return 'status-overdue'
-    }
-
-    if (normalizedStatus === 'partially paid') {
-      return 'status-partial'
-    }
-
-    return 'status-default'
-  }
-
-
-  /* =====================================================
-     SEARCH
-     ===================================================== */
-
-  const normalizedSearch =
-    searchTerm.trim().toLowerCase()
-
-  const filteredInvoices =
-    normalizedSearch === ''
-      ? invoices
-      : invoices.filter(invoice => {
-
-          const invoiceNumber =
-            String(
-              invoice.invoiceNumber || ''
-            ).toLowerCase()
-
-          const customerName =
-            String(
-              invoice.customer?.name || ''
-            ).toLowerCase()
-
-          return (
-            invoiceNumber.includes(
-              normalizedSearch
-            ) ||
-            customerName.includes(
-              normalizedSearch
-            )
-          )
-        })
-
-
-  /* =====================================================
-     LOADING
-     ===================================================== */
-
-  if (loading) {
-    return (
-      <div className="invoices-page">
-
-        <div className="page-heading">
-
-          <div>
-            <h1>Invoices</h1>
-
-            <p>
-              Manage and track all your business invoices.
-            </p>
-          </div>
-
-        </div>
-
-        <div className="invoices-card invoices-loading">
-
-          <p>
-            Loading invoices...
-          </p>
-
-        </div>
-
-      </div>
-    )
-  }
-
-
-  /* =====================================================
-     ERROR
-     ===================================================== */
-
-  if (error) {
-    return (
-      <div className="invoices-page">
-
-        <div className="page-heading">
-
-          <div>
-            <h1>Invoices</h1>
-
-            <p>
-              Manage and track all your business invoices.
-            </p>
-          </div>
-
-        </div>
-
-        <div className="invoices-card invoices-error">
-
-          <p>
-            {error}
-          </p>
-
-        </div>
-
-      </div>
-    )
-  }
-
-
   return (
     <div className="invoices-page">
 
-
-      {/* =====================================================
-          PAGE HEADER
-          ===================================================== */}
-
-      <div className="page-heading">
-
+      {/* PAGE HEADER */}
+      <div className="invoices-header">
         <div>
-
-          <h1>
-            Invoices
-          </h1>
-
+          <h1>Invoices</h1>
           <p>
-            Manage and track all your business invoices.
+            Manage and track your sales and purchase invoices.
           </p>
-
         </div>
-
 
         <Link
           to="/create-invoice"
@@ -197,475 +184,364 @@ function Invoices() {
         >
           + Create Invoice
         </Link>
-
       </div>
 
-
-      {/* =====================================================
-          SUMMARY CARDS
-          ===================================================== */}
-
+      {/* SUMMARY */}
       <div className="invoice-summary">
 
-
-        {/* Total Invoices */}
-
         <div className="invoice-summary-card">
-
-          <div className="summary-icon blue">
-            🧾
-          </div>
-
-          <div>
-
-            <span>
-              Total Invoices
-            </span>
-
-            <strong>
-              {invoices.length}
-            </strong>
-
-          </div>
-
+          <span>Total Invoices</span>
+          <strong>{invoices.length}</strong>
         </div>
 
-
-        {/* Paid */}
-
         <div className="invoice-summary-card">
-
-          <div className="summary-icon green">
-            ✓
-          </div>
-
-          <div>
-
-            <span>
-              Paid
-            </span>
-
-            <strong>
-              {
-                invoices.filter(
-                  invoice =>
-                    String(
-                      invoice.payment?.status || ''
-                    ).toLowerCase() === 'paid'
-                ).length
-              }
-            </strong>
-
-          </div>
-
+          <span>Sales Invoices</span>
+          <strong>{salesInvoices.length}</strong>
         </div>
 
-
-        {/* Pending */}
-
         <div className="invoice-summary-card">
-
-          <div className="summary-icon orange">
-            ◷
-          </div>
-
-          <div>
-
-            <span>
-              Pending
-            </span>
-
-            <strong>
-              {
-                invoices.filter(
-                  invoice =>
-                    String(
-                      invoice.payment?.status || ''
-                    ).toLowerCase() === 'pending'
-                ).length
-              }
-            </strong>
-
-          </div>
-
+          <span>Purchase Invoices</span>
+          <strong>{purchaseInvoices.length}</strong>
         </div>
 
-
-        {/* Total Value */}
-
         <div className="invoice-summary-card">
-
-          <div className="summary-icon purple">
-            ₹
-          </div>
-
-          <div>
-
-            <span>
-              Total Value
-            </span>
-
-            <strong>
-              {formatCurrency(
-                invoices.reduce(
-                  (total, invoice) =>
-                    total +
-                    Number(
-                      invoice.totals?.grandTotal || 0
-                    ),
-                  0
-                )
-              )}
-            </strong>
-
-          </div>
-
+          <span>Total Value</span>
+          <strong>{formatAmount(totalValue)}</strong>
         </div>
 
       </div>
 
-
-      {/* =====================================================
-          INVOICE TABLE
-          ===================================================== */}
-
+      {/* MAIN CARD */}
       <div className="invoices-card">
 
-
-        {/* ===================================================
-            CARD HEADER
-            =================================================== */}
-
-        <div className="invoices-card-header">
-
+        <div className="invoice-record-header">
           <div>
-
-            <h2>
-              All Invoices
-            </h2>
-
+            <h2>Invoice Records</h2>
             <p>
-              View and manage your saved invoices.
+              View and manage your invoice records.
             </p>
+          </div>
+        </div>
 
+        {/* TEXT TABS */}
+        <div className="invoice-type-navigation">
+
+          <div
+            className={`invoice-type-item ${
+              activeType === 'sales' ? 'active' : ''
+            }`}
+            onClick={() => changeType('sales')}
+          >
+            Sales Invoices
+            <span>{salesInvoices.length}</span>
           </div>
 
-
-          {/* =================================================
-              SEARCH + COUNT
-              ================================================= */}
-
-          <div className="invoice-header-actions">
-
-
-            <div className="invoice-search">
-
-              <span className="invoice-search-icon">
-                ⌕
-              </span>
-
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={event =>
-                  setSearchTerm(
-                    event.target.value
-                  )
-                }
-                placeholder="Search invoices..."
-                aria-label="Search invoices"
-              />
-
-              {searchTerm && (
-
-                <button
-                  type="button"
-                  className="invoice-search-clear"
-                  onClick={() =>
-                    setSearchTerm('')
-                  }
-                  aria-label="Clear search"
-                >
-                  ×
-                </button>
-
-              )}
-
-            </div>
-
-
-            <div className="invoice-table-count">
-
-              {filteredInvoices.length}{' '}
-
-              {filteredInvoices.length !== 1
-                ? 'invoices'
-                : 'invoice'}
-
-            </div>
-
+          <div
+            className={`invoice-type-item ${
+              activeType === 'purchase' ? 'active' : ''
+            }`}
+            onClick={() => changeType('purchase')}
+          >
+            Purchase Invoices
+            <span>{purchaseInvoices.length}</span>
           </div>
 
         </div>
 
+        {/* SEARCH / FILTER */}
+        <div className="invoice-toolbar">
 
-        {/* =====================================================
-            NO INVOICES
-            ===================================================== */}
+          <div className="invoice-search">
+            <span className="invoice-search-icon">⌕</span>
 
-        {invoices.length === 0 ? (
-
-          <div className="empty-invoices">
-
-            <div className="empty-invoice-icon">
-              🧾
-            </div>
-
-            <h3>
-              No invoices found
-            </h3>
-
-            <p>
-              Create your first invoice to start managing
-              your business records.
-            </p>
-
-            <Link
-              to="/create-invoice"
-              className="empty-create-button"
-            >
-              Create Your First Invoice
-            </Link>
-
-          </div>
-
-
-        ) : filteredInvoices.length === 0 ? (
-
-
-          /* =================================================
-             NO SEARCH RESULTS
-             ================================================= */
-
-          <div className="empty-invoices">
-
-            <div className="empty-invoice-icon">
-              🔍
-            </div>
-
-            <h3>
-              No matching invoices
-            </h3>
-
-            <p>
-              No invoice or customer matches
-              "{searchTerm}".
-            </p>
-
-            <button
-              type="button"
-              className="empty-clear-search-button"
-              onClick={() =>
-                setSearchTerm('')
+            <input
+              type="text"
+              placeholder={
+                activeType === 'sales'
+                  ? 'Search invoice or customer...'
+                  : 'Search invoice or vendor...'
               }
-            >
-              Clear Search
-            </button>
+              value={searchTerm}
+              onChange={event => {
+                setSearchTerm(event.target.value)
 
+                if (activeType === 'sales') {
+                  setSalesPage(1)
+                } else {
+                  setPurchasePage(1)
+                }
+              }}
+            />
           </div>
 
+          {activeType === 'sales' && (
+            <select
+              value={paymentFilter}
+              onChange={event => {
+                setPaymentFilter(event.target.value)
+                setSalesPage(1)
+              }}
+            >
+              <option value="all">All Payment Status</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+            </select>
+          )}
 
-        ) : (
+        </div>
 
+        {/* TABLE */}
+        <div className="invoice-table-wrapper">
 
-          /* =================================================
-             INVOICE LIST
-             ================================================= */
-
-          <div className="invoice-table-wrapper">
+          {activeType === 'sales' ? (
 
             <table className="invoice-list-table">
 
               <thead>
-
                 <tr>
-
-                  <th>
-                    Invoice
-                  </th>
-
-                  <th>
-                    Date
-                  </th>
-
-                  <th>
-                    Customer
-                  </th>
-
-                  <th>
-                    Payment
-                  </th>
-
-                  <th>
-                    Amount
-                  </th>
-
-                  <th>
-                    Action
-                  </th>
-
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Payment</th>
+                  <th>Amount</th>
+                  <th>Action</th>
                 </tr>
-
               </thead>
-
 
               <tbody>
 
-                {filteredInvoices.map(invoice => (
+                {paginatedInvoices.length > 0 ? (
 
-                  <tr
-                    key={invoice._id}
-                  >
+                  paginatedInvoices.map(invoice => (
 
+                    <tr key={invoice._id}>
 
-                    {/* Invoice Number */}
+                      <td>
+                        <strong>
+                          {invoice.invoiceNumber || '-'}
+                        </strong>
+                      </td>
 
-                    <td>
+                      <td>
+                        {formatDate(invoice.invoiceDate)}
+                      </td>
 
-                      <Link
-                        to={`/invoices/${invoice._id}`}
-                        className="invoice-number"
-                      >
-                        {invoice.invoiceNumber}
-                      </Link>
-
-                    </td>
-
-
-                    {/* Date */}
-
-                    <td>
-
-                      <span className="invoice-date">
-
-                        {formatDate(
-                          invoice.invoiceDate
-                        )}
-
-                      </span>
-
-                    </td>
-
-
-                    {/* Customer */}
-
-                    <td>
-
-                      <div className="customer-cell">
-
-                        <div className="customer-avatar">
-
-                          {
-                            (
-                              invoice.customer?.name ||
-                              'C'
-                            )
+                      <td>
+                        <div className="invoice-party">
+                          <div className="invoice-party-avatar">
+                            {(invoice.customer?.name || 'C')
                               .charAt(0)
-                              .toUpperCase()
-                          }
-
-                        </div>
-
-                        <div>
-
-                          <strong>
-
-                            {
-                              invoice.customer?.name ||
-                              'Unknown Customer'
-                            }
-
-                          </strong>
+                              .toUpperCase()}
+                          </div>
 
                           <span>
-
-                            {
-                              invoice.customer?.email ||
-                              'No email'
-                            }
-
+                            {invoice.customer?.name || '-'}
                           </span>
-
                         </div>
+                      </td>
 
-                      </div>
-
-                    </td>
-
-
-                    {/* Payment */}
-
-                    <td>
-
-                      <span
-                        className={`payment-status ${getStatusClass(
-                          invoice.payment?.status
-                        )}`}
-                      >
-
-                        <span className="status-dot"></span>
-
-                        {
-                          invoice.payment?.status ||
-                          'Unknown'
-                        }
-
-                      </span>
-
-                    </td>
-
-
-                    {/* Amount */}
-
-                    <td>
-
-                      <strong className="invoice-amount">
-
-                        {formatCurrency(
-                          invoice.totals?.grandTotal
-                        )}
-
-                      </strong>
-
-                    </td>
-
-
-                    {/* Action */}
-
-                    <td>
-
-                      <Link
-                        to={`/invoices/${invoice._id}`}
-                        className="view-invoice-button"
-                      >
-                        View
-                        <span>
-                          →
+                      <td>
+                        <span
+                          className={`payment-status ${
+                            String(
+                              invoice.payment?.status || ''
+                            ).toLowerCase()
+                          }`}
+                        >
+                          {invoice.payment?.status || 'Pending'}
                         </span>
-                      </Link>
+                      </td>
 
+                      <td>
+                        <strong>
+                          {formatAmount(
+                            invoice.totals?.grandTotal
+                          )}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <Link
+                          to={`/invoices/${invoice._id}`}
+                          className="view-invoice-button"
+                        >
+                          View
+                        </Link>
+                      </td>
+
+                    </tr>
+
+                  ))
+
+                ) : (
+
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="invoice-empty-state"
+                    >
+                      No sales invoices found.
                     </td>
-
                   </tr>
 
-                ))}
+                )}
 
               </tbody>
 
             </table>
 
-          </div>
+          ) : (
 
+            <table className="invoice-list-table">
+
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Vendor</th>
+                  <th>Payment Mode</th>
+                  <th>Amount</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {paginatedInvoices.length > 0 ? (
+
+                  paginatedInvoices.map(invoice => (
+
+                    <tr key={invoice._id}>
+
+                      <td>
+                        <strong>
+                          {invoice.invoiceNumber || '-'}
+                        </strong>
+                      </td>
+
+                      <td>
+                        {formatDate(invoice.invoiceDate)}
+                      </td>
+
+                      <td>
+                        <div className="invoice-party">
+                          <div className="invoice-party-avatar">
+                            {(invoice.vendor?.name || 'V')
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+
+                          <span>
+                            {invoice.vendor?.name || '-'}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span className="payment-mode">
+                          {invoice.paymentMode || '-'}
+                        </span>
+                      </td>
+
+                      <td>
+                        <strong>
+                          {formatAmount(
+                            invoice.totals?.grandTotal
+                          )}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <Link
+                          to={`/invoices/${invoice._id}?type=purchase`}
+                          className="view-invoice-button"
+                        >
+                          View
+                        </Link>
+                      </td>
+
+                    </tr>
+
+                  ))
+
+                ) : (
+
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="invoice-empty-state"
+                    >
+                      No purchase invoices found.
+                    </td>
+                  </tr>
+
+                )}
+
+              </tbody>
+
+            </table>
+
+          )}
+
+        </div>
+
+        {/* PAGINATION */}
+        {currentInvoices.length > 0 && (
+          <div className="invoice-pagination">
+
+            <span>
+              Showing {startIndex + 1}–
+              {Math.min(
+                startIndex + itemsPerPage,
+                currentInvoices.length
+              )}{' '}
+              of {currentInvoices.length}
+            </span>
+
+            <div className="pagination-controls">
+
+              <button
+                disabled={currentPage === 1}
+                onClick={() =>
+                  handlePageChange(currentPage - 1)
+                }
+              >
+                Previous
+              </button>
+
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map(page => (
+
+                <button
+                  key={page}
+                  className={
+                    page === currentPage
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() =>
+                    handlePageChange(page)
+                  }
+                >
+                  {page}
+                </button>
+
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  handlePageChange(currentPage + 1)
+                }
+              >
+                Next
+              </button>
+
+            </div>
+
+          </div>
         )}
 
       </div>

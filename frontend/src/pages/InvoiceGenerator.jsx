@@ -1,34 +1,66 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
 import { createInvoice } from '../services/api'
+
 import './InvoiceGenerator.css'
 
+
 function InvoiceGenerator() {
+
+  const navigate = useNavigate()
+
   const [invoice, setInvoice] = useState({
+
     invoiceNumber: 'INV-00001',
+
     invoiceDate: '',
+
     dueDate: '',
+
     orderNumber: '',
+
     orderDate: '',
+
     companyName: '',
+
     companyAddress: '',
+
     companyPhone: '',
+
     companyEmail: '',
+
     companyGSTIN: '',
+
     companyPAN: '',
+
     companyState: '',
+
     customerName: '',
+
     customerAddress: '',
+
     customerPhone: '',
+
     customerEmail: '',
+
     customerGSTIN: '',
+
     customerPAN: '',
+
     customerState: '',
+
     paymentMode: 'Cash',
+
     paymentStatus: 'Pending',
+
     referenceNumber: ''
+
   })
 
+
   const [items, setItems] = useState([
+
     {
       productName: '',
       hsnSac: '',
@@ -38,37 +70,65 @@ function InvoiceGenerator() {
       discount: 0,
       gstRate: 18
     }
+
   ])
 
-  const [saveMessage, setSaveMessage] = useState('')
+
+  const [isSaving, setIsSaving] = useState(false)
+
+  const [saveStatus, setSaveStatus] = useState(null)
+
+  const [savedInvoiceNumber, setSavedInvoiceNumber] = useState('')
+
 
   function handleInvoiceChange(event) {
+
     const { name, value } = event.target
 
     setInvoice(prev => ({
+
       ...prev,
+
       [name]: value
+
     }))
+
   }
 
+
   function handleItemChange(index, event) {
+
     const { name, value } = event.target
 
     setItems(prevItems =>
+
       prevItems.map((item, itemIndex) =>
+
         itemIndex === index
+
           ? {
+
               ...item,
+
               [name]: value
+
             }
+
           : item
+
       )
+
     )
+
   }
 
+
   function addItem() {
+
     setItems(prevItems => [
+
       ...prevItems,
+
       {
         productName: '',
         hsnSac: '',
@@ -78,176 +138,333 @@ function InvoiceGenerator() {
         discount: 0,
         gstRate: 18
       }
+
     ])
+
   }
+
 
   function removeItem(index) {
+
     setItems(prevItems =>
+
       prevItems.filter((_, itemIndex) => itemIndex !== index)
+
     )
+
   }
+
 
   function calculateItem(item) {
+
     const quantity = Number(item.quantity) || 0
+
     const rate = Number(item.rate) || 0
+
     const discount = Number(item.discount) || 0
+
     const gstRate = Number(item.gstRate) || 0
 
+
     const grossAmount = quantity * rate
+
     const taxableAmount = Math.max(grossAmount - discount, 0)
+
     const gstAmount = taxableAmount * (gstRate / 100)
+
     const total = taxableAmount + gstAmount
 
+
     return {
+
       grossAmount,
+
       taxableAmount,
+
       gstAmount,
+
       total
+
     }
+
   }
 
+
   function calculateTotals() {
+
     let subtotal = 0
+
     let totalDiscount = 0
+
     let taxableAmount = 0
+
     let totalGST = 0
 
+
     items.forEach(item => {
+
       const quantity = Number(item.quantity) || 0
+
       const rate = Number(item.rate) || 0
+
       const discount = Number(item.discount) || 0
+
 
       const calculated = calculateItem(item)
 
+
       subtotal += quantity * rate
+
       totalDiscount += discount
+
       taxableAmount += calculated.taxableAmount
+
       totalGST += calculated.gstAmount
+
     })
 
+
     const sameState =
+
       invoice.companyState &&
+
       invoice.customerState &&
+
       invoice.companyState === invoice.customerState
 
+
     const cgst = sameState ? totalGST / 2 : 0
+
     const sgst = sameState ? totalGST / 2 : 0
+
     const igst = sameState ? 0 : totalGST
+
 
     const grandTotal = taxableAmount + totalGST
 
+
     return {
+
       subtotal,
+
       discount: totalDiscount,
+
       taxableAmount,
+
       cgst,
+
       sgst,
+
       igst,
+
       totalGST,
+
       grandTotal
+
     }
+
   }
 
+
   function buildInvoiceData() {
+
     const totals = calculateTotals()
 
+
     const formattedItems = items.map(item => {
+
       const calculated = calculateItem(item)
 
+
       return {
+
         productName: item.productName,
+
         hsnSac: item.hsnSac,
+
         quantity: Number(item.quantity) || 0,
+
         unit: item.unit,
+
         rate: Number(item.rate) || 0,
+
         discount: Number(item.discount) || 0,
+
         gstRate: Number(item.gstRate) || 0,
+
         grossAmount: calculated.grossAmount,
+
         taxableAmount: calculated.taxableAmount,
+
         gstAmount: calculated.gstAmount,
+
         total: calculated.total
+
       }
+
     })
 
+
     return {
+
       invoiceNumber: invoice.invoiceNumber,
+
       invoiceDate: invoice.invoiceDate,
+
       dueDate: invoice.dueDate,
+
       orderNumber: invoice.orderNumber,
+
       orderDate: invoice.orderDate,
 
+
       company: {
+
         name: invoice.companyName,
+
         address: invoice.companyAddress,
+
         phone: invoice.companyPhone,
+
         email: invoice.companyEmail,
+
         gstin: invoice.companyGSTIN,
+
         pan: invoice.companyPAN,
+
         state: invoice.companyState
+
       },
 
+
       customer: {
+
         name: invoice.customerName,
+
         address: invoice.customerAddress,
+
         phone: invoice.customerPhone,
+
         email: invoice.customerEmail,
+
         gstin: invoice.customerGSTIN,
+
         pan: invoice.customerPAN,
+
         state: invoice.customerState
+
       },
+
 
       items: formattedItems,
 
+
       payment: {
+
         mode: invoice.paymentMode,
+
         status: invoice.paymentStatus,
+
         referenceNumber: invoice.referenceNumber
+
       },
 
+
       totals
+
     }
+
   }
+
 
   function formatCurrency(value) {
+
     return `₹${Number(value || 0).toLocaleString('en-IN', {
+
       minimumFractionDigits: 2,
+
       maximumFractionDigits: 2
+
     })}`
+
   }
 
+
   function formatDate(value) {
+
     if (!value) {
+
       return '--'
+
     }
+
 
     const date = new Date(`${value}T00:00:00`)
 
+
     return date.toLocaleDateString('en-IN', {
+
       day: '2-digit',
+
       month: '2-digit',
+
       year: 'numeric'
+
     })
+
   }
 
+
   async function handleSaveInvoice() {
+
+    if (isSaving) return
+
+    setIsSaving(true)
+
+    setSaveStatus(null)
+
+
     try {
-      setSaveMessage('Saving invoice...')
 
       const invoiceData = buildInvoiceData()
 
       const data = await createInvoice(invoiceData)
 
-      setSaveMessage(data.message || 'Invoice saved successfully.')
-    } catch (error) {
-      console.error(error)
-      setSaveMessage('Failed to save invoice.')
+
+      setSavedInvoiceNumber(
+
+        data.invoice_number || invoiceData.invoiceNumber
+
+      )
+
+      setSaveStatus('success')
+
     }
+
+    catch (error) {
+
+      console.error('Invoice save error:', error)
+
+      setSaveStatus('error')
+
+    }
+
+    finally {
+
+      setIsSaving(false)
+
+    }
+
   }
+
 
   const totals = calculateTotals()
 
+
   return (
+
     <div className="invoice-generator">
+
 
       {/* =====================================================
           LEFT SIDE - FORM
@@ -255,7 +472,22 @@ function InvoiceGenerator() {
 
       <div className="invoice-form">
 
+
+        {/* ===================================================
+            BACK BUTTON
+            =================================================== */}
+
+        <button
+          type="button"
+          className="invoice-back-button"
+          onClick={() => navigate('/upload')}
+        >
+          ← Back to Upload Invoice
+        </button>
+
+
         <h1>Create Invoice</h1>
+
 
         {/* ===================================================
             COMPANY DETAILS
@@ -270,16 +502,20 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Company Details</h2>
 
               <p>
                 Enter the details of the business issuing this invoice.
               </p>
+
             </div>
 
           </div>
 
+
           <div className="form-grid">
+
 
             <div className="form-field form-field-full">
 
@@ -296,6 +532,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field form-field-full">
 
               <label>
@@ -310,6 +547,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -326,6 +564,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -340,6 +579,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -356,6 +596,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -370,6 +611,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -433,16 +675,20 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Invoice Details</h2>
 
               <p>
                 Basic information about this invoice.
               </p>
+
             </div>
 
           </div>
 
+
           <div className="form-grid">
+
 
             <div className="form-field">
 
@@ -459,6 +705,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -473,6 +720,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -489,6 +737,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -504,6 +753,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -518,6 +768,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
           </div>
 
@@ -537,16 +788,20 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Customer Details</h2>
 
               <p>
                 Enter the details of the customer receiving the invoice.
               </p>
+
             </div>
 
           </div>
 
+
           <div className="form-grid">
+
 
             <div className="form-field form-field-full">
 
@@ -563,6 +818,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field form-field-full">
 
               <label>
@@ -577,6 +833,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -593,6 +850,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -607,6 +865,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -623,6 +882,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -637,6 +897,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
             <div className="form-field">
 
@@ -682,6 +943,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
           </div>
 
         </section>
@@ -700,20 +962,25 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Products / Services</h2>
 
               <p>
                 Add the products or services included in this invoice.
               </p>
+
             </div>
 
           </div>
+
 
           {items.map((item, index) => {
 
             const calculated = calculateItem(item)
 
+
             return (
+
               <div
                 className="item-form"
                 key={index}
@@ -723,7 +990,9 @@ function InvoiceGenerator() {
                   Item {index + 1}
                 </h3>
 
+
                 <div className="form-grid">
+
 
                   <div className="form-field form-field-full">
 
@@ -742,6 +1011,7 @@ function InvoiceGenerator() {
 
                   </div>
 
+
                   <div className="form-field">
 
                     <label>
@@ -758,6 +1028,7 @@ function InvoiceGenerator() {
                     />
 
                   </div>
+
 
                   <div className="form-field">
 
@@ -801,6 +1072,7 @@ function InvoiceGenerator() {
 
                   </div>
 
+
                   <div className="form-field">
 
                     <label>
@@ -818,6 +1090,7 @@ function InvoiceGenerator() {
                     />
 
                   </div>
+
 
                   <div className="form-field">
 
@@ -837,6 +1110,7 @@ function InvoiceGenerator() {
 
                   </div>
 
+
                   <div className="form-field">
 
                     <label>
@@ -854,6 +1128,7 @@ function InvoiceGenerator() {
                     />
 
                   </div>
+
 
                   <div className="form-field">
 
@@ -893,45 +1168,62 @@ function InvoiceGenerator() {
 
                   </div>
 
+
                 </div>
+
 
                 <div className="item-calculation">
 
                   <span>
                     Taxable Amount:
+
                     <strong>
                       {formatCurrency(calculated.taxableAmount)}
                     </strong>
+
                   </span>
+
 
                   <span>
                     GST:
+
                     <strong>
                       {formatCurrency(calculated.gstAmount)}
                     </strong>
+
                   </span>
+
 
                   <span>
                     Total:
+
                     <strong>
                       {formatCurrency(calculated.total)}
                     </strong>
+
                   </span>
 
                 </div>
 
+
                 {items.length > 1 && (
+
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
                   >
                     Remove Item
                   </button>
+
                 )}
 
+
               </div>
+
             )
+
           })}
+
 
           <button
             type="button"
@@ -939,6 +1231,7 @@ function InvoiceGenerator() {
           >
             + Add Product / Service
           </button>
+
 
         </section>
 
@@ -956,16 +1249,20 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Payment Details</h2>
 
               <p>
                 Record the payment method and status.
               </p>
+
             </div>
 
           </div>
 
+
           <div className="form-grid">
+
 
             <div className="form-field">
 
@@ -1003,6 +1300,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field">
 
               <label>
@@ -1035,6 +1333,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
             <div className="form-field form-field-full">
 
               <label>
@@ -1049,6 +1348,7 @@ function InvoiceGenerator() {
               />
 
             </div>
+
 
           </div>
 
@@ -1068,70 +1368,121 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Invoice Totals</h2>
 
               <p>
                 Automatically calculated invoice summary.
               </p>
+
             </div>
 
           </div>
 
+
           <p>
-            <span>Subtotal</span>
+
+            <span>
+              Subtotal
+            </span>
+
             <strong>
               {formatCurrency(totals.subtotal)}
             </strong>
+
           </p>
 
+
           <p>
-            <span>Discount</span>
+
+            <span>
+              Discount
+            </span>
+
             <strong>
               {formatCurrency(totals.discount)}
             </strong>
+
           </p>
 
+
           <p>
-            <span>Taxable Amount</span>
+
+            <span>
+              Taxable Amount
+            </span>
+
             <strong>
               {formatCurrency(totals.taxableAmount)}
             </strong>
+
           </p>
 
+
           <p>
-            <span>CGST</span>
+
+            <span>
+              CGST
+            </span>
+
             <strong>
               {formatCurrency(totals.cgst)}
             </strong>
+
           </p>
 
+
           <p>
-            <span>SGST</span>
+
+            <span>
+              SGST
+            </span>
+
             <strong>
               {formatCurrency(totals.sgst)}
             </strong>
+
           </p>
 
+
           <p>
-            <span>IGST</span>
+
+            <span>
+              IGST
+            </span>
+
             <strong>
               {formatCurrency(totals.igst)}
             </strong>
+
           </p>
 
+
           <p>
-            <span>Total GST</span>
+
+            <span>
+              Total GST
+            </span>
+
             <strong>
               {formatCurrency(totals.totalGST)}
             </strong>
+
           </p>
 
+
           <h3>
-            <span>Grand Total</span>
+
+            <span>
+              Grand Total
+            </span>
+
             <strong>
               {formatCurrency(totals.grandTotal)}
             </strong>
+
           </h3>
+
 
         </section>
 
@@ -1149,40 +1500,127 @@ function InvoiceGenerator() {
             </div>
 
             <div>
+
               <h2>Save Invoice</h2>
 
               <p>
                 Save this invoice to your SmartInvoice database.
               </p>
+
             </div>
 
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              console.log('Invoice Data:', buildInvoiceData())
-            }}
-          >
-            Test Invoice Data
-          </button>
 
           <button
             type="button"
+            className="save-invoice-button"
             onClick={handleSaveInvoice}
+            disabled={isSaving}
           >
-            Save Invoice
+            {isSaving ? 'Saving Invoice...' : 'Save Invoice'}
           </button>
-
-          {saveMessage && (
-            <p>
-              {saveMessage}
-            </p>
-          )}
 
         </section>
 
+
       </div>
+
+
+      {/* =====================================================
+          SAVE RESULT POPUP
+          ===================================================== */}
+
+      {saveStatus === 'success' && (
+
+        <div className="invoice-save-overlay">
+
+          <div
+            className="invoice-save-popup success"
+            role="dialog"
+            aria-modal="true"
+          >
+
+            <div className="invoice-save-icon">
+              ✓
+            </div>
+
+            <h3>
+              Invoice Saved Successfully
+            </h3>
+
+            <p>
+              Invoice {savedInvoiceNumber} has been saved successfully.
+            </p>
+
+            <div className="invoice-save-actions">
+
+              <button
+                type="button"
+                className="invoice-save-secondary"
+                onClick={() => setSaveStatus(null)}
+              >
+                Stay Here
+              </button>
+
+              <button
+                type="button"
+                className="invoice-save-primary"
+                onClick={() => navigate('/invoices')}
+              >
+                Go to Invoices
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {saveStatus === 'error' && (
+
+        <div className="invoice-save-overlay">
+
+          <div
+            className="invoice-save-popup error"
+            role="dialog"
+            aria-modal="true"
+          >
+
+            <div className="invoice-save-icon">
+              ✕
+            </div>
+
+            <h3>
+              Invoice Could Not Be Saved
+            </h3>
+
+            <p>
+              Something went wrong while saving the invoice.
+              <br />
+              Please try again.
+            </p>
+
+            <div className="invoice-save-actions">
+
+              <button
+                type="button"
+                className="invoice-save-primary"
+                onClick={() => setSaveStatus(null)}
+              >
+                Try Again
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
 
       {/* =====================================================
@@ -1193,11 +1631,14 @@ function InvoiceGenerator() {
 
         <div className="invoice-preview">
 
+
           <div className="invoice-header">
+
 
             <div className="logo-placeholder">
               LOGO
             </div>
+
 
             <div className="company-info">
 
@@ -1210,24 +1651,37 @@ function InvoiceGenerator() {
               </p>
 
               <p>
+
                 {invoice.companyPhone || 'Phone'}
+
                 {' • '}
+
                 {invoice.companyEmail || 'Email'}
+
               </p>
 
               <p>
+
                 GSTIN:
+
                 {' '}
+
                 {invoice.companyGSTIN || '--'}
+
               </p>
 
               <p>
+
                 PAN:
+
                 {' '}
+
                 {invoice.companyPAN || '--'}
+
               </p>
 
             </div>
+
 
             <div className="tax-invoice">
 
@@ -1237,6 +1691,7 @@ function InvoiceGenerator() {
 
             </div>
 
+
           </div>
 
 
@@ -1244,7 +1699,9 @@ function InvoiceGenerator() {
 
           <div className="invoice-meta">
 
+
             <div>
+
               <strong>
                 Invoice No.
               </strong>
@@ -1252,9 +1709,12 @@ function InvoiceGenerator() {
               <span>
                 {invoice.invoiceNumber || '--'}
               </span>
+
             </div>
 
+
             <div>
+
               <strong>
                 Invoice Date
               </strong>
@@ -1262,9 +1722,12 @@ function InvoiceGenerator() {
               <span>
                 {formatDate(invoice.invoiceDate)}
               </span>
+
             </div>
 
+
             <div>
+
               <strong>
                 Due Date
               </strong>
@@ -1272,9 +1735,12 @@ function InvoiceGenerator() {
               <span>
                 {formatDate(invoice.dueDate)}
               </span>
+
             </div>
 
+
             <div>
+
               <strong>
                 Order No.
               </strong>
@@ -1282,9 +1748,12 @@ function InvoiceGenerator() {
               <span>
                 {invoice.orderNumber || '--'}
               </span>
+
             </div>
 
+
             <div>
+
               <strong>
                 Payment
               </strong>
@@ -1292,7 +1761,9 @@ function InvoiceGenerator() {
               <span>
                 {invoice.paymentMode}
               </span>
+
             </div>
+
 
           </div>
 
@@ -1300,6 +1771,7 @@ function InvoiceGenerator() {
           {/* Billing */}
 
           <div className="billing-section">
+
 
             <div className="billing-box">
 
@@ -1316,27 +1788,43 @@ function InvoiceGenerator() {
               </p>
 
               <p>
+
                 Phone:
+
                 {' '}
+
                 {invoice.customerPhone || '--'}
+
               </p>
 
               <p>
+
                 Email:
+
                 {' '}
+
                 {invoice.customerEmail || '--'}
+
               </p>
 
               <p>
+
                 GSTIN:
+
                 {' '}
+
                 {invoice.customerGSTIN || '--'}
+
               </p>
 
               <p>
+
                 State:
+
                 {' '}
+
                 {invoice.customerState || '--'}
+
               </p>
 
             </div>
@@ -1349,30 +1837,47 @@ function InvoiceGenerator() {
               </h3>
 
               <p>
+
                 Payment Mode:
+
                 {' '}
+
                 {invoice.paymentMode}
+
               </p>
 
               <p>
+
                 Payment Status:
+
                 {' '}
+
                 {invoice.paymentStatus}
+
               </p>
 
               <p>
+
                 Reference:
+
                 {' '}
+
                 {invoice.referenceNumber || '--'}
+
               </p>
 
               <p>
+
                 PAN:
+
                 {' '}
+
                 {invoice.customerPAN || '--'}
+
               </p>
 
             </div>
+
 
           </div>
 
@@ -1425,6 +1930,7 @@ function InvoiceGenerator() {
 
             </thead>
 
+
             <tbody>
 
               {items.map((item, index) => {
@@ -1432,6 +1938,7 @@ function InvoiceGenerator() {
                 const calculated = calculateItem(item)
 
                 return (
+
                   <tr key={index}>
 
                     <td>
@@ -1447,9 +1954,13 @@ function InvoiceGenerator() {
                     </td>
 
                     <td>
+
                       {item.quantity}
+
                       {' '}
+
                       {item.unit}
+
                     </td>
 
                     <td>
@@ -1473,7 +1984,9 @@ function InvoiceGenerator() {
                     </td>
 
                   </tr>
+
                 )
+
               })}
 
             </tbody>
@@ -1484,6 +1997,7 @@ function InvoiceGenerator() {
           {/* Bottom Section */}
 
           <div className="bottom-section">
+
 
             <div className="notes">
 
@@ -1508,7 +2022,9 @@ function InvoiceGenerator() {
 
             <div className="totals">
 
+
               <div>
+
                 <span>
                   Subtotal
                 </span>
@@ -1516,9 +2032,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.subtotal)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   Discount
                 </span>
@@ -1526,9 +2045,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.discount)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   Taxable Amount
                 </span>
@@ -1536,9 +2058,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.taxableAmount)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   CGST
                 </span>
@@ -1546,9 +2071,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.cgst)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   SGST
                 </span>
@@ -1556,9 +2084,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.sgst)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   IGST
                 </span>
@@ -1566,9 +2097,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.igst)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   Total GST
                 </span>
@@ -1576,9 +2110,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.totalGST)}
                 </strong>
+
               </div>
 
+
               <div>
+
                 <span>
                   Grand Total
                 </span>
@@ -1586,9 +2123,12 @@ function InvoiceGenerator() {
                 <strong>
                   {formatCurrency(totals.grandTotal)}
                 </strong>
+
               </div>
 
+
             </div>
+
 
           </div>
 
@@ -1604,15 +2144,10 @@ function InvoiceGenerator() {
             <div>
               Authorized Signatory
             </div>
-
           </div>
-
         </div>
-
       </div>
-
     </div>
   )
 }
-
 export default InvoiceGenerator

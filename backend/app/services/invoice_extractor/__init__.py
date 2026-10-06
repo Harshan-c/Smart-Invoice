@@ -1,0 +1,1 @@
+from app.services.invoice_extractor.extractor import extract_invoice_fields

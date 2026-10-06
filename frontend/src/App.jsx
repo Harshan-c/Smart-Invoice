@@ -12,6 +12,8 @@ import InvoiceDetails from './pages/InvoiceDetails'
 import InvoiceGenerator from './pages/InvoiceGenerator'
 import UploadInvoice from './pages/UploadInvoice'
 import UpdatePayment from './pages/UpdatePayment'
+import Vendors from './pages/Vendors'
+import Login from './pages/LoginPage'
 
 function App() {
   return (
@@ -37,6 +39,11 @@ function App() {
           />
 
           <Route
+            path="/vendors"
+            element={<Vendors />}
+          />
+
+          <Route
             path="/invoices/:invoiceId"
             element={<InvoiceDetails />}
           />
@@ -48,6 +55,11 @@ function App() {
           <Route
             path="/create-invoice"
             element={<InvoiceGenerator />}
+          />
+
+          <Route
+            path='/'
+            element={<Login />}
           />
 
         </Route>

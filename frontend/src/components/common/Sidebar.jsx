@@ -49,6 +49,14 @@ function Sidebar() {
         </NavLink>
 
         <NavLink
+          to="/vendors"
+          className="sidebar-link"
+        >
+          <span className="sidebar-icon">♙</span>
+          <span>Vendors</span>
+        </NavLink>
+
+        <NavLink
           to="/analytics"
           className="sidebar-link"
         >

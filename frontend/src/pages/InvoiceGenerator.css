@@ -251,7 +251,7 @@
 
 .invoice-form button:hover {
   background: #2868d8;
-
+  
   box-shadow:
     0 4px 10px rgba(52, 120, 238, 0.18);
 }
@@ -1128,6 +1128,186 @@
   font-size: 12px;
 }
 
+/* =========================================================
+   BACK TO UPLOAD INVOICE BUTTON
+   ========================================================= */
+
+.invoice-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-bottom: 18px;
+
+  padding: 8px 14px;
+
+  border: 1px solid #d7dee8;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #334155;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.invoice-back-button:hover {
+  background: #f8fafc;
+  border-color: #b8c2d1;
+  color: #1e293b;
+}
+
+/* =========================================================
+   INVOICE SAVE POPUP
+   ========================================================= */
+
+.invoice-save-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(15, 23, 42, 0.45);
+
+  z-index: 9999;
+}
+
+.invoice-save-popup {
+  width: min(420px, 100%);
+
+  padding: 30px;
+
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+
+  text-align: center;
+}
+
+.invoice-save-icon {
+  width: 52px;
+  height: 52px;
+
+  margin: 0 auto 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.invoice-save-popup.success .invoice-save-icon {
+  background: #e8f7ee;
+  color: #16834b;
+}
+
+.invoice-save-popup.error .invoice-save-icon {
+  background: #fdecec;
+  color: #c62828;
+}
+
+.invoice-save-popup h3 {
+  margin: 0 0 10px;
+
+  font-size: 20px;
+  font-weight: 700;
+
+  color: #1e293b;
+}
+
+.invoice-save-popup p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.invoice-save-actions {
+  display: flex;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  margin-top: 24px;
+}
+
+.invoice-save-actions button {
+  min-width: 120px;
+
+  padding: 10px 16px;
+
+  border-radius: 7px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.invoice-save-primary {
+  border: 1px solid #2563eb;
+
+  background: #2563eb;
+
+  color: #ffffff;
+}
+
+.invoice-save-primary:hover {
+  background: #1d4ed8;
+}
+
+.invoice-save-secondary {
+  border: 1px solid #d7dee8;
+
+  background: #ffffff;
+
+  color: #334155;
+}
+
+.invoice-save-secondary:hover {
+  background: #f8fafc;
+}
+
+@media (max-width: 600px) {
+
+  .invoice-save-popup {
+    padding: 24px 20px;
+  }
+
+  .invoice-save-actions {
+    flex-direction: column;
+  }
+
+  .invoice-save-actions button {
+    width: 100%;
+  }
+
+}
 
 /* =========================================================
    RESPONSIVE ITEM CALCULATIONS

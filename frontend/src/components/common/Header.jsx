@@ -36,13 +36,13 @@ function Header() {
         <div className="profile">
 
           <div className="profile-avatar">
-            SS
+            HS
           </div>
 
           <div className="profile-info">
 
             <strong>
-              Shreya Sharma
+              Harshan Shetty
             </strong>
 
             <span>

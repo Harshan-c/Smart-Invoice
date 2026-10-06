@@ -19,13 +19,16 @@ function UpdatePayment() {
 
   const navigate = useNavigate()
 
+
   const [invoice, setInvoice] = useState(null)
+
 
   const [payment, setPayment] = useState({
     mode: 'Cash',
     status: 'Pending',
     referenceNumber: ''
   })
+
 
   const [loading, setLoading] = useState(true)
 
@@ -51,16 +54,71 @@ function UpdatePayment() {
 
       setError('')
 
+
       const data = await getInvoice(invoiceId)
 
       setInvoice(data)
 
-      setPayment({
-        mode: data.payment?.mode || 'Cash',
-        status: data.payment?.status || 'Pending',
-        referenceNumber:
-          data.payment?.referenceNumber || ''
-      })
+
+      /*
+       * Sales Invoice:
+       *
+       * payment.mode
+       * payment.status
+       * payment.referenceNumber
+       *
+       *
+       * Purchase Invoice:
+       *
+       * paymentMode
+       *
+       * We support both structures.
+       */
+
+      const isPurchaseInvoice =
+        data.recordType === 'purchase' ||
+        data.invoiceType === 'purchase'
+
+
+      if (isPurchaseInvoice) {
+
+        setPayment({
+
+          mode:
+            data.paymentMode ||
+            data.payment?.mode ||
+            'Cash',
+
+          status:
+            data.payment?.status ||
+            'Pending',
+
+          referenceNumber:
+            data.payment?.referenceNumber ||
+            ''
+
+        })
+
+      } else {
+
+        setPayment({
+
+          mode:
+            data.payment?.mode ||
+            'Cash',
+
+          status:
+            data.payment?.status ||
+            'Pending',
+
+          referenceNumber:
+            data.payment?.referenceNumber ||
+            ''
+
+        })
+
+      }
+
 
     } catch (error) {
 
@@ -75,6 +133,7 @@ function UpdatePayment() {
       setLoading(false)
 
     }
+
   }
 
 
@@ -82,9 +141,13 @@ function UpdatePayment() {
 
     const { name, value } = event.target
 
+
     setPayment(previous => ({
+
       ...previous,
+
       [name]: value
+
     }))
 
   }
@@ -100,13 +163,18 @@ function UpdatePayment() {
 
       setMessage('')
 
+
       const data =
         await updateInvoicePayment(
           invoiceId,
           payment
         )
 
-      setMessage(data.message)
+
+      setMessage(
+        data.message || 'Payment details updated successfully.'
+      )
+
 
       setTimeout(() => {
 
@@ -115,6 +183,7 @@ function UpdatePayment() {
         )
 
       }, 800)
+
 
     } catch (error) {
 
@@ -129,74 +198,110 @@ function UpdatePayment() {
       setSaving(false)
 
     }
+
   }
 
 
   if (loading) {
 
     return (
+
       <div className="payment-page">
 
-        <h1>Update Payment</h1>
+        <h1>
+          Update Payment
+        </h1>
 
         <p>
           Loading payment details...
         </p>
 
       </div>
+
     )
+
   }
 
 
   if (error && !invoice) {
 
     return (
+
       <div className="payment-page">
 
-        <h1>Update Payment</h1>
+        <h1>
+          Update Payment
+        </h1>
+
 
         <div className="payment-error">
+
           {error}
+
         </div>
+
 
         <Link
           to={`/invoices/${invoiceId}`}
           className="payment-back-link"
         >
+
           ← Back to Invoice
+
         </Link>
 
+
       </div>
+
     )
+
   }
+
+
+  const isPurchaseInvoice =
+    invoice?.recordType === 'purchase' ||
+    invoice?.invoiceType === 'purchase'
 
 
   return (
 
     <div className="payment-page">
 
-      {/* HEADER */}
+
+      {/* =========================
+          HEADER
+      ========================== */}
 
       <div className="payment-page-header">
 
+
         <div>
+
 
           <Link
             to={`/invoices/${invoiceId}`}
             className="payment-back-link"
           >
+
             ← Back to Invoice
+
           </Link>
+
 
           <h1>
             Update Payment
           </h1>
 
+
           <p>
+
             Update the payment information for this invoice.
+
           </p>
 
+
         </div>
+
 
         <div className="payment-invoice-number">
 
@@ -204,18 +309,24 @@ function UpdatePayment() {
 
         </div>
 
+
       </div>
 
 
-      {/* PAYMENT CARD */}
+      {/* =========================
+          PAYMENT CARD
+      ========================== */}
 
       <section className="payment-card">
 
+
         <div className="payment-card-header">
+
 
           <div className="payment-icon">
             ₹
           </div>
+
 
           <div>
 
@@ -223,12 +334,16 @@ function UpdatePayment() {
               Payment Details
             </h2>
 
+
             <p>
+
               Only payment information can be changed
               after an invoice is generated.
+
             </p>
 
           </div>
+
 
         </div>
 
@@ -236,13 +351,17 @@ function UpdatePayment() {
         <div className="payment-form">
 
 
-          {/* PAYMENT MODE */}
+          {/* =========================
+              PAYMENT MODE
+          ========================== */}
 
           <div className="payment-field">
+
 
             <label>
               Payment Mode
             </label>
+
 
             <select
               name="mode"
@@ -276,16 +395,21 @@ function UpdatePayment() {
 
             </select>
 
+
           </div>
 
 
-          {/* PAYMENT STATUS */}
+          {/* =========================
+              PAYMENT STATUS
+          ========================== */}
 
           <div className="payment-field">
+
 
             <label>
               Payment Status
             </label>
+
 
             <select
               name="status"
@@ -311,16 +435,21 @@ function UpdatePayment() {
 
             </select>
 
+
           </div>
 
 
-          {/* REFERENCE NUMBER */}
+          {/* =========================
+              REFERENCE NUMBER
+          ========================== */}
 
           <div className="payment-field payment-field-wide">
+
 
             <label>
               Reference Number
             </label>
+
 
             <input
               type="text"
@@ -330,21 +459,27 @@ function UpdatePayment() {
               placeholder="Enter payment reference number"
             />
 
+
           </div>
 
 
         </div>
 
 
-        {/* INFORMATION */}
+        {/* =========================
+            INFORMATION
+        ========================== */}
 
         <div className="payment-info">
+
 
           <strong>
             Invoice amount
           </strong>
 
+
           <span>
+
             ₹
             {Number(
               invoice?.totals?.grandTotal || 0
@@ -355,21 +490,29 @@ function UpdatePayment() {
                 maximumFractionDigits: 2
               }
             )}
+
           </span>
+
 
         </div>
 
 
-        {/* ACTIONS */}
+        {/* =========================
+            ACTIONS
+        ========================== */}
 
         <div className="payment-actions">
+
 
           <Link
             to={`/invoices/${invoiceId}`}
             className="payment-cancel-button"
           >
+
             Cancel
+
           </Link>
+
 
           <button
             type="button"
@@ -385,31 +528,46 @@ function UpdatePayment() {
 
           </button>
 
+
         </div>
 
+
+        {/* =========================
+            SUCCESS MESSAGE
+        ========================== */}
 
         {message && (
 
           <div className="payment-success">
+
             ✓ {message}
+
           </div>
 
         )}
 
+
+        {/* =========================
+            ERROR MESSAGE
+        ========================== */}
 
         {error && (
 
           <div className="payment-error">
+
             {error}
+
           </div>
 
         )}
 
+
       </section>
 
+
     </div>
+
   )
+
 }
-
-
 export default UpdatePayment

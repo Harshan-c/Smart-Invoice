@@ -3,7 +3,7 @@ function Dashboard() {
     <div>
 
       <h1>
-        Welcome back, Shreya!
+        Welcome back, Harshan Shetty!
       </h1>
 
       <p>

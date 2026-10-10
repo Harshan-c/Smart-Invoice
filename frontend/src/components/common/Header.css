@@ -240,3 +240,237 @@
   }
 
 }
+
+.logout-button {
+  padding: 9px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.logout-button:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.header-company-wrapper {
+  position: relative;
+}
+
+.header-company-trigger {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.header-company-trigger:hover {
+  background: #f8fafc;
+}
+
+.header-company-avatar,
+.company-popover-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #e8eef8;
+  color: #334155;
+  font-weight: 700;
+}
+
+.header-company-avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 13px;
+}
+
+.header-company-avatar img,
+.company-popover-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header-company-trigger .profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.header-company-trigger .profile-info strong {
+  max-width: 180px;
+  overflow: hidden;
+  color: #111827;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-company-trigger .profile-info span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.header-company-trigger .profile-arrow {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.company-profile-popover {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 35px rgb(15 23 42 / 14%);
+  color: #1f2937;
+  animation: company-popover-appear 0.16s ease-out;
+}
+
+.company-popover-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 19px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.company-popover-avatar {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+.company-popover-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.company-popover-heading strong {
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 14px;
+}
+
+.company-popover-heading > div > span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.company-popover-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 19px;
+}
+
+.company-popover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.company-popover-field:last-child {
+  border-bottom: none;
+}
+
+.company-popover-field > span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.company-popover-field > strong {
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.company-popover-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 19px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.company-popover-message,
+.company-popover-error {
+  margin: 0;
+  padding: 22px 19px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.company-popover-error {
+  color: #b91c1c;
+}
+
+@keyframes company-popover-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .header-company-trigger {
+    gap: 7px;
+    padding: 5px;
+  }
+
+  .header-company-trigger .profile-info {
+    display: none;
+  }
+
+  .header-company-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .company-profile-popover {
+    right: -55px;
+    width: 320px;
+  }
+}

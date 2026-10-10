@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { createInvoice } from '../services/api'
+import { createInvoice, getCompanyProfile } from '../services/api'
 
 import './InvoiceGenerator.css'
 
@@ -9,6 +9,29 @@ import './InvoiceGenerator.css'
 function InvoiceGenerator() {
 
   const navigate = useNavigate()
+
+  useEffect(() => {
+    async function loadCompanyProfile() {
+      try {
+        const company = await getCompanyProfile()
+
+        setInvoice(prev => ({
+          ...prev,
+          companyName: company.companyName || '',
+          companyAddress: company.address || '',
+          companyPhone: company.phone || '',
+          companyEmail: company.email || '',
+          companyGSTIN: company.gstin || '',
+          companyPAN: company.pan || '',
+          companyState: company.state || ''
+        }))
+      } catch (error) {
+        console.error('Failed to load company profile:', error)
+      }
+    }
+
+    loadCompanyProfile()
+  }, [])
 
   const [invoice, setInvoice] = useState({
 

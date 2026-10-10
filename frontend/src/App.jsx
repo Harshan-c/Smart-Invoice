@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter,
   Routes,
@@ -5,7 +6,6 @@ import {
 } from 'react-router-dom'
 
 import DashboardLayout from './layouts/DashboardLayout'
-
 import Dashboard from './pages/Dashboard'
 import Invoices from './pages/Invoices'
 import InvoiceDetails from './pages/InvoiceDetails'
@@ -13,59 +13,63 @@ import InvoiceGenerator from './pages/InvoiceGenerator'
 import UploadInvoice from './pages/UploadInvoice'
 import UpdatePayment from './pages/UpdatePayment'
 import Vendors from './pages/Vendors'
-import Login from './pages/LoginPage'
+import Login from './pages/Login'
+import CompanyProfile from './pages/CompanyProfile'
+
+import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
   return (
     <BrowserRouter>
-
       <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<Login />} />
 
         <Route
-          element={<DashboardLayout />}
-        >
+          path="/create-profile"
+          element={<CompanyProfile />}
+        />
 
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
-          <Route 
-            path="/upload" element={<UploadInvoice />} 
-          />
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
 
-          <Route
-            path="/invoices"
-            element={<Invoices />}
-          />
+            <Route
+              path="/upload"
+              element={<UploadInvoice />}
+            />
 
-          <Route
-            path="/vendors"
-            element={<Vendors />}
-          />
+            <Route
+              path="/invoices"
+              element={<Invoices />}
+            />
 
-          <Route
-            path="/invoices/:invoiceId"
-            element={<InvoiceDetails />}
-          />
-          <Route
-            path="/invoices/:invoiceId/payment"
-            element={<UpdatePayment />}
-          />
+            <Route
+              path="/vendors"
+              element={<Vendors />}
+            />
 
-          <Route
-            path="/create-invoice"
-            element={<InvoiceGenerator />}
-          />
+            <Route
+              path="/invoices/:invoiceId"
+              element={<InvoiceDetails />}
+            />
 
-          <Route
-            path='/'
-            element={<Login />}
-          />
+            <Route
+              path="/invoices/:invoiceId/payment"
+              element={<UpdatePayment />}
+            />
 
+            <Route
+              path="/create-invoice"
+              element={<InvoiceGenerator />}
+            />
+          </Route>
         </Route>
-
       </Routes>
-
     </BrowserRouter>
   )
 }

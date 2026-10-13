@@ -1,7 +1,54 @@
+
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getInvoices } from '../services/api'
 import './Invoices.css'
+
+// =========================================================
+// PAYMENT STATUS HELPER
+// =========================================================
+
+function getInvoicePaymentStatus(invoice) {
+  const status = String(
+    invoice.payment?.status || 'pending'
+  ).trim().toLowerCase()
+
+  // Paid invoices must never be marked overdue.
+  if (status === 'paid') {
+    return 'paid'
+  }
+
+  // Only sales invoices are checked for overdue status.
+  const isSalesInvoice =
+    invoice.recordType === 'sales' ||
+    (!invoice.recordType && invoice.customer)
+
+  if (!isSalesInvoice || !invoice.dueDate) {
+    return status
+  }
+
+  const dueDate = new Date(invoice.dueDate)
+
+  if (Number.isNaN(dueDate.getTime())) {
+    return status
+  }
+
+  // Compare calendar dates, ignoring the current time.
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  dueDate.setHours(0, 0, 0, 0)
+
+  if (dueDate < today) {
+    return 'overdue'
+  }
+
+  return status
+}
+
+
+// =========================================================
+// INVOICES COMPONENT
+// =========================================================
 
 function Invoices() {
   const [invoices, setInvoices] = useState([])
@@ -19,20 +66,53 @@ function Invoices() {
   const [salesPage, setSalesPage] = useState(1)
   const [purchasePage, setPurchasePage] = useState(1)
 
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
   const itemsPerPage = 10
 
+  // =======================================================
+  // LOAD INVOICES
+  // =======================================================
+
   useEffect(() => {
+    let mounted = true
+
+    async function loadInvoices() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const data = await getInvoices()
+
+        if (mounted) {
+          setInvoices(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        console.error('Failed to load invoices:', err)
+
+        if (mounted) {
+          setError(
+            err.message || 'Failed to load invoices.'
+          )
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
     loadInvoices()
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
-  async function loadInvoices() {
-    try {
-      const data = await getInvoices()
-      setInvoices(data)
-    } catch (error) {
-      console.error('Failed to load invoices:', error)
-    }
-  }
+  // =======================================================
+  // SPLIT SALES AND PURCHASE INVOICES
+  // =======================================================
 
   const salesInvoices = useMemo(() => {
     return invoices.filter(
@@ -50,10 +130,14 @@ function Invoices() {
     )
   }, [invoices])
 
-  const filteredSalesInvoices = useMemo(() => {
-    return salesInvoices.filter(invoice => {
-      const search = searchTerm.toLowerCase()
+  // =======================================================
+  // FILTER SALES INVOICES
+  // =======================================================
 
+  const filteredSalesInvoices = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase()
+
+    return salesInvoices.filter(invoice => {
       const matchesSearch =
         String(invoice.invoiceNumber || '')
           .toLowerCase()
@@ -62,9 +146,8 @@ function Invoices() {
           .toLowerCase()
           .includes(search)
 
-      const paymentStatus = String(
-        invoice.payment?.status || ''
-      ).toLowerCase()
+      const paymentStatus =
+        getInvoicePaymentStatus(invoice)
 
       const matchesPayment =
         paymentFilter === 'all' ||
@@ -74,10 +157,14 @@ function Invoices() {
     })
   }, [salesInvoices, searchTerm, paymentFilter])
 
-  const filteredPurchaseInvoices = useMemo(() => {
-    return purchaseInvoices.filter(invoice => {
-      const search = searchTerm.toLowerCase()
+  // =======================================================
+  // FILTER PURCHASE INVOICES
+  // =======================================================
 
+  const filteredPurchaseInvoices = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase()
+
+    return purchaseInvoices.filter(invoice => {
       return (
         String(invoice.invoiceNumber || '')
           .toLowerCase()
@@ -88,6 +175,10 @@ function Invoices() {
       )
     })
   }, [purchaseInvoices, searchTerm])
+
+  // =======================================================
+  // CURRENT PAGE DATA
+  // =======================================================
 
   const currentInvoices =
     activeType === 'sales'
@@ -104,13 +195,23 @@ function Invoices() {
     Math.ceil(currentInvoices.length / itemsPerPage)
   )
 
+  // Prevent stale page numbers from showing an empty page.
+  const safeCurrentPage = Math.min(
+    currentPage,
+    totalPages
+  )
+
   const startIndex =
-    (currentPage - 1) * itemsPerPage
+    (safeCurrentPage - 1) * itemsPerPage
 
   const paginatedInvoices = currentInvoices.slice(
     startIndex,
     startIndex + itemsPerPage
   )
+
+  // =======================================================
+  // SUMMARY VALUES
+  // =======================================================
 
   const totalValue = invoices.reduce(
     (sum, invoice) =>
@@ -119,34 +220,58 @@ function Invoices() {
   )
 
   const paidInvoices = salesInvoices.filter(
-    invoice =>
-      String(invoice.payment?.status || '').toLowerCase() ===
-      'paid'
+    invoice => getInvoicePaymentStatus(invoice) === 'paid'
   )
+
+  // =======================================================
+  // EVENT HANDLERS
+  // =======================================================
 
   function changeType(type) {
     setActiveType(type)
 
-    setSearchParams({
-      type
-    })
+    setSearchParams({ type })
 
     setSearchTerm('')
     setPaymentFilter('all')
+
+    // Reset pagination for both invoice types.
+    setSalesPage(1)
+    setPurchasePage(1)
+  }
+
+  function handleSearchChange(value) {
+    setSearchTerm(value)
+    setSalesPage(1)
+    setPurchasePage(1)
+  }
+
+  function handlePaymentFilterChange(value) {
+    setPaymentFilter(value)
+    setSalesPage(1)
   }
 
   function handlePageChange(page) {
+    const nextPage = Math.max(
+      1,
+      Math.min(page, totalPages)
+    )
+
     if (activeType === 'sales') {
-      setSalesPage(page)
+      setSalesPage(nextPage)
     } else {
-      setPurchasePage(page)
+      setPurchasePage(nextPage)
     }
   }
+
+  // =======================================================
+  // FORMATTERS
+  // =======================================================
 
   function formatAmount(amount) {
     return `₹${Number(amount || 0).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     })}`
   }
 
@@ -162,9 +287,44 @@ function Invoices() {
     return parsedDate.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
     })
   }
+
+  // =======================================================
+  // LOADING AND ERROR STATES
+  // =======================================================
+
+  if (loading) {
+    return (
+      <div className="invoices-page">
+        <div className="invoices-loading">
+          Loading invoices...
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="invoices-page">
+        <div className="invoices-error">
+          <p>{error}</p>
+
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // =======================================================
+  // RENDER
+  // =======================================================
 
   return (
     <div className="invoices-page">
@@ -186,7 +346,7 @@ function Invoices() {
         </Link>
       </div>
 
-      {/* SUMMARY */}
+      {/* SUMMARY CARDS */}
       <div className="invoice-summary">
 
         <div className="invoice-summary-card">
@@ -211,7 +371,7 @@ function Invoices() {
 
       </div>
 
-      {/* MAIN CARD */}
+      {/* MAIN INVOICE CARD */}
       <div className="invoices-card">
 
         <div className="invoice-record-header">
@@ -223,14 +383,25 @@ function Invoices() {
           </div>
         </div>
 
-        {/* TEXT TABS */}
+        {/* SALES / PURCHASE TABS */}
         <div className="invoice-type-navigation">
 
           <div
             className={`invoice-type-item ${
               activeType === 'sales' ? 'active' : ''
             }`}
+            role="button"
+            tabIndex={0}
             onClick={() => changeType('sales')}
+            onKeyDown={event => {
+              if (
+                event.key === 'Enter' ||
+                event.key === ' '
+              ) {
+                event.preventDefault()
+                changeType('sales')
+              }
+            }}
           >
             Sales Invoices
             <span>{salesInvoices.length}</span>
@@ -240,7 +411,18 @@ function Invoices() {
             className={`invoice-type-item ${
               activeType === 'purchase' ? 'active' : ''
             }`}
+            role="button"
+            tabIndex={0}
             onClick={() => changeType('purchase')}
+            onKeyDown={event => {
+              if (
+                event.key === 'Enter' ||
+                event.key === ' '
+              ) {
+                event.preventDefault()
+                changeType('purchase')
+              }
+            }}
           >
             Purchase Invoices
             <span>{purchaseInvoices.length}</span>
@@ -248,7 +430,7 @@ function Invoices() {
 
         </div>
 
-        {/* SEARCH / FILTER */}
+        {/* SEARCH AND PAYMENT FILTER */}
         <div className="invoice-toolbar">
 
           <div className="invoice-search">
@@ -262,41 +444,34 @@ function Invoices() {
                   : 'Search invoice or vendor...'
               }
               value={searchTerm}
-              onChange={event => {
-                setSearchTerm(event.target.value)
-
-                if (activeType === 'sales') {
-                  setSalesPage(1)
-                } else {
-                  setPurchasePage(1)
-                }
-              }}
+              onChange={event =>
+                handleSearchChange(event.target.value)
+              }
             />
           </div>
 
           {activeType === 'sales' && (
             <select
               value={paymentFilter}
-              onChange={event => {
-                setPaymentFilter(event.target.value)
-                setSalesPage(1)
-              }}
+              onChange={event =>
+                handlePaymentFilterChange(event.target.value)
+              }
             >
               <option value="all">All Payment Status</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
+              <option value="overdue">Overdue</option>
             </select>
           )}
 
         </div>
 
-        {/* TABLE */}
+        {/* INVOICE TABLE */}
         <div className="invoice-table-wrapper">
 
           {activeType === 'sales' ? (
 
             <table className="invoice-list-table">
-
               <thead>
                 <tr>
                   <th>Invoice</th>
@@ -309,72 +484,66 @@ function Invoices() {
               </thead>
 
               <tbody>
-
                 {paginatedInvoices.length > 0 ? (
+                  paginatedInvoices.map(invoice => {
+                    const status =
+                      getInvoicePaymentStatus(invoice)
 
-                  paginatedInvoices.map(invoice => (
+                    return (
+                      <tr key={invoice._id}>
+                        <td>
+                          <strong>
+                            {invoice.invoiceNumber || '-'}
+                          </strong>
+                        </td>
 
-                    <tr key={invoice._id}>
+                        <td>
+                          {formatDate(invoice.invoiceDate)}
+                        </td>
 
-                      <td>
-                        <strong>
-                          {invoice.invoiceNumber || '-'}
-                        </strong>
-                      </td>
+                        <td>
+                          <div className="invoice-party">
+                            <div className="invoice-party-avatar">
+                              {(invoice.customer?.name || 'C')
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
 
-                      <td>
-                        {formatDate(invoice.invoiceDate)}
-                      </td>
-
-                      <td>
-                        <div className="invoice-party">
-                          <div className="invoice-party-avatar">
-                            {(invoice.customer?.name || 'C')
-                              .charAt(0)
-                              .toUpperCase()}
+                            <span>
+                              {invoice.customer?.name || '-'}
+                            </span>
                           </div>
+                        </td>
 
-                          <span>
-                            {invoice.customer?.name || '-'}
+                        <td>
+                          <span
+                            className={`payment-status ${status}`}
+                          >
+                            {status.charAt(0).toUpperCase() +
+                              status.slice(1)}
                           </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td>
-                        <span
-                          className={`payment-status ${
-                            String(
-                              invoice.payment?.status || ''
-                            ).toLowerCase()
-                          }`}
-                        >
-                          {invoice.payment?.status || 'Pending'}
-                        </span>
-                      </td>
+                        <td>
+                          <strong>
+                            {formatAmount(
+                              invoice.totals?.grandTotal
+                            )}
+                          </strong>
+                        </td>
 
-                      <td>
-                        <strong>
-                          {formatAmount(
-                            invoice.totals?.grandTotal
-                          )}
-                        </strong>
-                      </td>
-
-                      <td>
-                        <Link
-                          to={`/invoices/${invoice._id}`}
-                          className="view-invoice-button"
-                        >
-                          View
-                        </Link>
-                      </td>
-
-                    </tr>
-
-                  ))
-
+                        <td>
+                          <Link
+                            to={`/invoices/${invoice._id}`}
+                            className="view-invoice-button"
+                          >
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })
                 ) : (
-
                   <tr>
                     <td
                       colSpan="6"
@@ -383,17 +552,13 @@ function Invoices() {
                       No sales invoices found.
                     </td>
                   </tr>
-
                 )}
-
               </tbody>
-
             </table>
 
           ) : (
 
             <table className="invoice-list-table">
-
               <thead>
                 <tr>
                   <th>Invoice</th>
@@ -406,13 +571,9 @@ function Invoices() {
               </thead>
 
               <tbody>
-
                 {paginatedInvoices.length > 0 ? (
-
                   paginatedInvoices.map(invoice => (
-
                     <tr key={invoice._id}>
-
                       <td>
                         <strong>
                           {invoice.invoiceNumber || '-'}
@@ -459,13 +620,9 @@ function Invoices() {
                           View
                         </Link>
                       </td>
-
                     </tr>
-
                   ))
-
                 ) : (
-
                   <tr>
                     <td
                       colSpan="6"
@@ -474,11 +631,8 @@ function Invoices() {
                       No purchase invoices found.
                     </td>
                   </tr>
-
                 )}
-
               </tbody>
-
             </table>
 
           )}
@@ -501,9 +655,10 @@ function Invoices() {
             <div className="pagination-controls">
 
               <button
-                disabled={currentPage === 1}
+                type="button"
+                disabled={safeCurrentPage === 1}
                 onClick={() =>
-                  handlePageChange(currentPage - 1)
+                  handlePageChange(safeCurrentPage - 1)
                 }
               >
                 Previous
@@ -513,39 +668,33 @@ function Invoices() {
                 { length: totalPages },
                 (_, index) => index + 1
               ).map(page => (
-
                 <button
+                  type="button"
                   key={page}
                   className={
-                    page === currentPage
-                      ? 'active'
-                      : ''
+                    page === safeCurrentPage ? 'active' : ''
                   }
-                  onClick={() =>
-                    handlePageChange(page)
-                  }
+                  onClick={() => handlePageChange(page)}
                 >
                   {page}
                 </button>
-
               ))}
 
               <button
-                disabled={currentPage === totalPages}
+                type="button"
+                disabled={safeCurrentPage === totalPages}
                 onClick={() =>
-                  handlePageChange(currentPage + 1)
+                  handlePageChange(safeCurrentPage + 1)
                 }
               >
                 Next
               </button>
 
             </div>
-
           </div>
         )}
 
       </div>
-
     </div>
   )
 }

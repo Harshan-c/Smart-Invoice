@@ -10,29 +10,6 @@ function InvoiceGenerator() {
 
   const navigate = useNavigate()
 
-  useEffect(() => {
-    async function loadCompanyProfile() {
-      try {
-        const company = await getCompanyProfile()
-
-        setInvoice(prev => ({
-          ...prev,
-          companyName: company.companyName || '',
-          companyAddress: company.address || '',
-          companyPhone: company.phone || '',
-          companyEmail: company.email || '',
-          companyGSTIN: company.gstin || '',
-          companyPAN: company.pan || '',
-          companyState: company.state || ''
-        }))
-      } catch (error) {
-        console.error('Failed to load company profile:', error)
-      }
-    }
-
-    loadCompanyProfile()
-  }, [])
-
   const [invoice, setInvoice] = useState({
 
     invoiceNumber: 'INV-00001',
@@ -46,6 +23,8 @@ function InvoiceGenerator() {
     orderDate: '',
 
     companyName: '',
+
+    companyLogo: '',
 
     companyAddress: '',
 
@@ -102,6 +81,30 @@ function InvoiceGenerator() {
   const [saveStatus, setSaveStatus] = useState(null)
 
   const [savedInvoiceNumber, setSavedInvoiceNumber] = useState('')
+
+  useEffect(() => {
+    async function loadCompanyProfile() {
+      try {
+        const company = await getCompanyProfile()
+
+        setInvoice(prev => ({
+          ...prev,
+          companyName: company.companyName || '',
+          companyLogo: company.logo || '',
+          companyAddress: company.address || '',
+          companyPhone: company.phone || '',
+          companyEmail: company.email || '',
+          companyGSTIN: company.gstin || '',
+          companyPAN: company.pan || '',
+          companyState: company.state || ''
+        }))
+      } catch (error) {
+        console.error('Failed to load company profile:', error)
+      }
+    }
+
+    loadCompanyProfile()
+  }, [])
 
 
   function handleInvoiceChange(event) {
@@ -437,49 +440,112 @@ function InvoiceGenerator() {
 
   }
 
-
   async function handleSaveInvoice() {
-
     if (isSaving) return
 
-    setIsSaving(true)
+    // Validate required invoice fields.
+    const requiredFields = [
+      {
+        value: invoice.invoiceNumber,
+        label: 'Invoice number'
+      },
+      {
+        value: invoice.invoiceDate,
+        label: 'Invoice date'
+      },
+      {
+        value: invoice.companyName,
+        label: 'Company name'
+      },
+      {
+        value: invoice.customerName,
+        label: 'Customer name'
+      }
+    ]
 
+    for (const field of requiredFields) {
+      if (!String(field.value || '').trim()) {
+        window.alert(`${field.label} is required.`)
+        return
+      } 
+    }
+
+    // Validate invoice items.
+    if (!items.length) {
+      window.alert('Add at least one product or service.')
+      return
+    }
+
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index]
+      const itemNumber = index + 1
+
+      if (!String(item.productName || '').trim()) {
+        window.alert(`Enter a product or service name for item ${itemNumber}.`)
+        return
+      }
+
+      const quantity = Number(item.quantity)
+      const rate = Number(item.rate)
+      const discount = Number(item.discount)
+      const gstRate = Number(item.gstRate)
+
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        window.alert(`Quantity for item ${itemNumber} must be greater than zero.`)
+        return
+      }
+
+      if (!Number.isFinite(rate) || rate < 0) {
+        window.alert(`Rate for item ${itemNumber} cannot be negative.`)
+        return
+      }
+
+      if (!Number.isFinite(discount) || discount < 0) {
+        window.alert(`Discount for item ${itemNumber} cannot be negative.`)
+        return
+      }
+
+      if (discount > quantity * rate) {
+        window.alert(`Discount for item ${itemNumber} cannot exceed its gross amount.`)
+        return
+      }
+
+      if (![0, 5, 12, 18, 28].includes(gstRate)) {
+        window.alert(`Select a valid GST rate for item ${itemNumber}.`)
+        return
+      }
+    }
+
+    setIsSaving(true)
     setSaveStatus(null)
 
-
     try {
-
       const invoiceData = buildInvoiceData()
-
       const data = await createInvoice(invoiceData)
 
-
       setSavedInvoiceNumber(
-
         data.invoice_number || invoiceData.invoiceNumber
-
       )
 
       setSaveStatus('success')
-
-    }
-
-    catch (error) {
-
+    } catch (error) {
       console.error('Invoice save error:', error)
 
-      setSaveStatus('error')
+      const errorMessage = (error.message || '').toLowerCase()
 
-    }
-
-    finally {
-
+      if (
+        error.status === 409 ||
+        errorMessage.includes('already exists') ||
+        errorMessage.includes('duplicate')
+      ) {
+        setSaveStatus('duplicate')
+      } else {
+        setSaveStatus('error')
+      }
+    } finally {
       setIsSaving(false)
-
     }
-
   }
-
 
   const totals = calculateTotals()
 
@@ -503,9 +569,9 @@ function InvoiceGenerator() {
         <button
           type="button"
           className="invoice-back-button"
-          onClick={() => navigate('/upload')}
+          onClick={() => navigate('/invoices')}
         >
-          ← Back to Upload Invoice
+          ← Back to Invoices List
         </button>
 
 
@@ -1454,7 +1520,6 @@ function InvoiceGenerator() {
 
           </p>
 
-
           <p>
 
             <span>
@@ -1645,6 +1710,43 @@ function InvoiceGenerator() {
 
       )}
 
+      {saveStatus === 'duplicate' && (
+        <div className="invoice-save-overlay">
+          <div
+            className="invoice-save-popup error"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="duplicate-invoice-title"
+          >
+            <div className="invoice-save-icon">
+              !
+            </div>
+
+            <h3 id="duplicate-invoice-title">
+              Duplicate Invoice Number
+            </h3>
+
+            <p> 
+              Invoice number {invoice.invoiceNumber} already exists
+              for your company.
+            </p>
+
+            <p>
+              Please enter a different invoice number and try again.
+            </p>
+
+            <div className="invoice-save-actions">
+              <button
+                type="button"
+                className="invoice-save-primary"
+                onClick={() => setSaveStatus(null)}
+              >
+                Change Invoice Number
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =====================================================
           RIGHT SIDE - LIVE A4 PREVIEW
@@ -1659,7 +1761,15 @@ function InvoiceGenerator() {
 
 
             <div className="logo-placeholder">
-              LOGO
+              {invoice.companyLogo ? (
+                <img
+                  src={invoice.companyLogo}
+                  alt={`${invoice.companyName || 'Company'} logo`}
+                  className="invoice-company-logo"
+                />
+              ) : (
+                'LOGO'
+              )}
             </div>
 
 

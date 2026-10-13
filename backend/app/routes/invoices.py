@@ -1,7 +1,7 @@
-
 import os
 
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 from fastapi import (
     APIRouter,
     Depends,
@@ -79,6 +79,7 @@ async def upload_invoice(
 # CREATE PURCHASE INVOICE
 # =========================================================
 
+
 @router.post("/purchase-invoices")
 def create_purchase_invoice(
     invoice: PurchaseInvoiceCreate,
@@ -90,9 +91,17 @@ def create_purchase_invoice(
     invoice_data["recordType"] = "purchase"
     invoice_data["companyId"] = company_id
 
-    result = invoices_collection.insert_one(
-        invoice_data
-    )
+    try:
+        result = invoices_collection.insert_one(invoice_data)
+
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "A purchase invoice with this number already exists "
+                "for your company."
+            ),
+        )
 
     return {
         "message": "Purchase invoice saved successfully",
@@ -106,6 +115,7 @@ def create_purchase_invoice(
 # CREATE SALES INVOICE
 # =========================================================
 
+
 @router.post("/invoices")
 def create_invoice(
     invoice: InvoiceCreate,
@@ -117,9 +127,17 @@ def create_invoice(
     invoice_data["recordType"] = "sales"
     invoice_data["companyId"] = company_id
 
-    result = invoices_collection.insert_one(
-        invoice_data
-    )
+    try:
+        result = invoices_collection.insert_one(invoice_data)
+
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "An invoice with this number already exists "
+                "for your company."
+            ),
+        )
 
     return {
         "message": "Invoice saved successfully",

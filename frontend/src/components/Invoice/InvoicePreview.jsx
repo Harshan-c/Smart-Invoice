@@ -1,474 +1,194 @@
-import '../../pages/InvoiceGenerator.css'
-function InvoicePreview({ invoice }) {
 
+import '../../pages/InvoiceGenerator.css'
+
+function InvoicePreview({ invoice }) {
   function formatCurrency(value) {
-    return `₹${Number(value || 0).toLocaleString(
-      'en-IN',
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }
-    )}`
+    return `₹${Number(value || 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`
   }
 
   function formatDate(date) {
-    if (!date) {
-      return '--'
-    }
+    if (!date) return '--'
 
     const parts = date.split('-')
-
-    if (parts.length !== 3) {
-      return date
-    }
+    if (parts.length !== 3) return date
 
     return `${parts[2]}-${parts[1]}-${parts[0]}`
   }
 
   return (
     <div className="invoice-preview">
-
-      {/* Header */}
-
+      {/* HEADER */}
       <div className="invoice-header">
+        <div className="invoice-company-brand">
+          {invoice.company?.logo && (
+            <div className="logo-placeholder">
+              <img
+                src={invoice.company.logo}
+                alt="Company Logo"
+                className="invoice-company-logo"
+              />
+            </div>
+          )}
 
-        <div>
-          <div className="logo-placeholder">
-            LOGO
+          <div className="company-info">
+            <h1>{invoice.company?.name || 'COMPANY NAME'}</h1>
+            <p>{invoice.company?.address || 'Company Address'}</p>
+            <p>{invoice.company?.phone || 'Phone'}</p>
+            <p>{invoice.company?.email || 'Email'}</p>
+            <p>GSTIN: {invoice.company?.gstin || '--'}</p>
+            <p>PAN: {invoice.company?.pan || '--'}</p>
           </div>
-        </div>
-
-        <div className="company-info">
-
-          <h1>
-            {invoice.company?.name ||
-              'COMPANY NAME'}
-          </h1>
-
-          <p>
-            {invoice.company?.address ||
-              'Company Address'}
-          </p>
-
-          <p>
-            {invoice.company?.phone ||
-              'Phone'}
-          </p>
-
-          <p>
-            {invoice.company?.email ||
-              'Email'}
-          </p>
-
-          <p>
-            GSTIN:{' '}
-            {invoice.company?.gstin ||
-              '--'}
-          </p>
-
-          <p>
-            PAN:{' '}
-            {invoice.company?.pan ||
-              '--'}
-          </p>
-
         </div>
 
         <div className="tax-invoice">
-
-          <h2>
-            TAX INVOICE
-          </h2>
-
+          <h2>TAX INVOICE</h2>
         </div>
-
       </div>
 
-      {/* Invoice information */}
-
+      {/* INVOICE INFORMATION */}
       <div className="invoice-meta">
-
         <div>
-          <strong>
-            Invoice No:
-          </strong>
-
-          <span>
-            {invoice.invoiceNumber}
-          </span>
+          <strong>Invoice No:</strong>
+          <span>{invoice.invoiceNumber || '--'}</span>
         </div>
 
         <div>
-          <strong>
-            Invoice Date:
-          </strong>
-
-          <span>
-            {formatDate(
-              invoice.invoiceDate
-            )}
-          </span>
+          <strong>Invoice Date:</strong>
+          <span>{formatDate(invoice.invoiceDate)}</span>
         </div>
 
         <div>
-          <strong>
-            Due Date:
-          </strong>
-
-          <span>
-            {formatDate(
-              invoice.dueDate
-            )}
-          </span>
+          <strong>Due Date:</strong>
+          <span>{formatDate(invoice.dueDate)}</span>
         </div>
 
         <div>
-          <strong>
-            Order No:
-          </strong>
-
-          <span>
-            {invoice.orderNumber ||
-              '--'}
-          </span>
+          <strong>Order No:</strong>
+          <span>{invoice.orderNumber || '--'}</span>
         </div>
 
         <div>
-          <strong>
-            Order Date:
-          </strong>
-
-          <span>
-            {formatDate(
-              invoice.orderDate
-            )}
-          </span>
+          <strong>Order Date:</strong>
+          <span>{formatDate(invoice.orderDate)}</span>
         </div>
-
       </div>
 
-      {/* Billing */}
-
+      {/* BILLING AND PAYMENT */}
       <div className="billing-section">
-
         <div className="billing-box">
-
-          <h3>
-            BILL TO
-          </h3>
-
-          <strong>
-            {invoice.customer?.name ||
-              'Customer Name'}
-          </strong>
-
-          <p>
-            {invoice.customer?.address ||
-              'Customer Address'}
-          </p>
-
-          <p>
-            Phone:{' '}
-            {invoice.customer?.phone ||
-              '--'}
-          </p>
-
-          <p>
-            Email:{' '}
-            {invoice.customer?.email ||
-              '--'}
-          </p>
-
-          <p>
-            GSTIN:{' '}
-            {invoice.customer?.gstin ||
-              '--'}
-          </p>
-
-          <p>
-            PAN:{' '}
-            {invoice.customer?.pan ||
-              '--'}
-          </p>
-
+          <h3>BILL TO</h3>
+          <strong>{invoice.customer?.name || 'Customer Name'}</strong>
+          <p>{invoice.customer?.address || 'Customer Address'}</p>
+          <p>Phone: {invoice.customer?.phone || '--'}</p>
+          <p>Email: {invoice.customer?.email || '--'}</p>
+          <p>GSTIN: {invoice.customer?.gstin || '--'}</p>
+          <p>PAN: {invoice.customer?.pan || '--'}</p>
         </div>
 
         <div className="billing-box">
-
-          <h3>
-            PAYMENT
-          </h3>
-
+          <h3>PAYMENT</h3>
           <p>
-            <strong>
-              Mode:
-            </strong>{' '}
-            {invoice.payment?.mode ||
-              '--'}
+            <strong>Mode:</strong> {invoice.payment?.mode || '--'}
           </p>
-
           <p>
-            <strong>
-              Status:
-            </strong>{' '}
-            {invoice.payment?.status ||
-              '--'}
+            <strong>Status:</strong> {invoice.payment?.status || '--'}
           </p>
-
           <p>
-            <strong>
-              Reference:
-            </strong>{' '}
-            {invoice.payment?.referenceNumber ||
-              '--'}
+            <strong>Reference:</strong>{' '}
+            {invoice.payment?.referenceNumber || '--'}
           </p>
-
         </div>
-
       </div>
 
-      {/* Products */}
-
+      {/* PRODUCTS */}
       <table className="invoice-table">
-
         <thead>
-
           <tr>
-
             <th>#</th>
-
-            <th>
-              Product / Service
-            </th>
-
-            <th>
-              HSN/SAC
-            </th>
-
-            <th>
-              Qty
-            </th>
-
-            <th>
-              Unit
-            </th>
-
-            <th>
-              Rate
-            </th>
-
-            <th>
-              GST
-            </th>
-
-            <th>
-              Amount
-            </th>
-
+            <th>Product / Service</th>
+            <th>HSN/SAC</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Rate</th>
+            <th>GST</th>
+            <th>Amount</th>
           </tr>
-
         </thead>
 
         <tbody>
-
-          {invoice.items?.map(
-            (item, index) => (
-
-              <tr key={index}>
-
-                <td>
-                  {index + 1}
-                </td>
-
-                <td>
-                  {item.productName ||
-                    '--'}
-                </td>
-
-                <td>
-                  {item.hsnSac ||
-                    '--'}
-                </td>
-
-                <td>
-                  {item.quantity}
-                </td>
-
-                <td>
-                  {item.unit}
-                </td>
-
-                <td>
-                  {formatCurrency(
-                    item.rate
-                  )}
-                </td>
-
-                <td>
-                  {item.gstRate}%
-                </td>
-
-                <td>
-                  {formatCurrency(
-                    item.total
-                  )}
-                </td>
-
-              </tr>
-
-            )
-          )}
-
+          {invoice.items?.map((item, index) => (
+            <tr key={index}>
+              <td>{index + 1}</td>
+              <td>{item.productName || '--'}</td>
+              <td>{item.hsnSac || '--'}</td>
+              <td>{item.quantity ?? '--'}</td>
+              <td>{item.unit || '--'}</td>
+              <td>{formatCurrency(item.rate)}</td>
+              <td>{item.gstRate ?? 0}%</td>
+              <td>{formatCurrency(item.total)}</td>
+            </tr>
+          ))}
         </tbody>
-
       </table>
 
-      {/* Bottom */}
-
+      {/* TOTALS AND NOTES */}
       <div className="bottom-section">
-
         <div className="notes">
+          <h3>Amount in Words</h3>
+          <p>Amount in words will be generated here.</p>
 
-          <h3>
-            Amount in Words
-          </h3>
-
+          <h3>Terms &amp; Conditions</h3>
           <p>
-            Amount in words will be
-            generated here.
+            Payment should be made according to the agreed payment terms.
           </p>
-
-          <h3>
-            Terms & Conditions
-          </h3>
-
-          <p>
-            Payment should be made
-            according to the agreed
-            payment terms.
-          </p>
-
         </div>
 
         <div className="totals">
-
           <div>
-
-            <span>
-              Subtotal
-            </span>
-
-            <span>
-              {formatCurrency(
-                invoice.totals?.subtotal
-              )}
-            </span>
-
+            <span>Subtotal</span>
+            <span>{formatCurrency(invoice.totals?.subtotal)}</span>
           </div>
 
           <div>
-
-            <span>
-              Discount
-            </span>
-
-            <span>
-              {formatCurrency(
-                invoice.totals?.discount
-              )}
-            </span>
-
+            <span>Discount</span>
+            <span>{formatCurrency(invoice.totals?.discount)}</span>
           </div>
 
           <div>
-
-            <span>
-              Taxable Amount
-            </span>
-
-            <span>
-              {formatCurrency(
-                invoice.totals?.taxableAmount
-              )}
-            </span>
-
+            <span>Taxable Amount</span>
+            <span>{formatCurrency(invoice.totals?.taxableAmount)}</span>
           </div>
 
           <div>
-
-            <span>
-              CGST
-            </span>
-
-            <span>
-              {formatCurrency(
-                invoice.totals?.cgst
-              )}
-            </span>
-
+            <span>CGST</span>
+            <span>{formatCurrency(invoice.totals?.cgst)}</span>
           </div>
 
           <div>
-
-            <span>
-              SGST
-            </span>
-
-            <span>
-              {formatCurrency(
-                invoice.totals?.sgst
-              )}
-            </span>
-
+            <span>SGST</span>
+            <span>{formatCurrency(invoice.totals?.sgst)}</span>
           </div>
 
           <div>
-
-            <span>
-              IGST
-            </span>
-
-            <span>
-              {formatCurrency(
-                invoice.totals?.igst
-              )}
-            </span>
-
+            <span>IGST</span>
+            <span>{formatCurrency(invoice.totals?.igst)}</span>
           </div>
 
           <div>
-
-            <strong>
-              Grand Total
-            </strong>
-
-            <strong>
-              {formatCurrency(
-                invoice.totals?.grandTotal
-              )}
-            </strong>
-
+            <strong>Grand Total</strong>
+            <strong>{formatCurrency(invoice.totals?.grandTotal)}</strong>
           </div>
-
         </div>
-
       </div>
 
-      {/* Footer */}
-
+      {/* FOOTER */}
       <div className="invoice-footer">
-
-        <p>
-          This is a computer-generated
-          invoice.
-        </p>
-
-        <div>
-          Authorized Signature
-        </div>
-
+        <p>This is a computer-generated invoice.</p>
+        <div>Authorized Signature</div>
       </div>
-
     </div>
   )
 }

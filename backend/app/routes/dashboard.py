@@ -3,21 +3,27 @@ from datetime import datetime
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends
+
 from app.database.connection import invoices_collection
 from app.routes.auth import get_current_company
 
+
 router = APIRouter(
     prefix="/api/dashboard",
-    tags=["Dashboard"]
+    tags=["Dashboard"],
 )
 
+
+# =========================================================
+# DATE HELPERS
+# =========================================================
 
 def parse_date(value):
     if not value:
         return None
 
     if isinstance(value, datetime):
-        return value
+        return value.replace(tzinfo=None) if value.tzinfo else value
 
     value = str(value).strip()
 
@@ -36,9 +42,10 @@ def parse_date(value):
             pass
 
     try:
-        return datetime.fromisoformat(
+        parsed = datetime.fromisoformat(
             value.replace("Z", "+00:00")
-        ).replace(tzinfo=None)
+        )
+        return parsed.replace(tzinfo=None)
     except ValueError:
         return None
 
@@ -51,7 +58,8 @@ def number(value):
 
 
 def payment_status(invoice):
-    status = invoice.get("payment", {}).get("status")
+    payment = invoice.get("payment") or {}
+    status = payment.get("status")
 
     if status:
         return str(status).strip().lower()
@@ -72,35 +80,37 @@ def last_six_months():
     now = datetime.now()
     months = []
 
-    year = now.year
-    month = now.month
-
     for offset in range(5, -1, -1):
-        m = month - offset
-        y = year
+        month = now.month - offset
+        year = now.year
 
-        while m <= 0:
-            m += 12
-            y -= 1
+        while month <= 0:
+            month += 12
+            year -= 1
 
-        months.append(datetime(y, m, 1))
+        months.append(datetime(year, month, 1))
 
     return months
 
 
+# =========================================================
+# DASHBOARD ENDPOINT
+# =========================================================
+
 @router.get("")
 def get_dashboard(
-    company: dict = Depends(get_current_company)
+    company: dict = Depends(get_current_company),
 ):
     company_id = company["_id"]
-    # Fetch only the logged-in company's invoices.
+
+    # Fetch only this company's sales and purchase invoices.
     invoices = list(
         invoices_collection.find(
             {
                 "recordType": {
-                    "$in": ["sales", "purchase"]
+                    "$in": ["sales", "purchase"],
                 },
-                "companyId": company_id
+                "companyId": company_id,
             }
         )
     )
@@ -117,32 +127,52 @@ def get_dashboard(
 
     recent = []
 
-    today = datetime.now()
+    today = datetime.now().date()
 
     for invoice in invoices:
         record_type = invoice.get("recordType")
 
+        # -------------------------------------------------
+        # INVOICE AMOUNT
+        # -------------------------------------------------
+
+        totals = invoice.get("totals") or {}
+        amount = number(totals.get("grandTotal"))
+
         if record_type == "sales":
-            amount = number(
-                invoice.get("totals", {}).get("grandTotal")
-            )
             sales_total += amount
-        else:
-            amount = number(
-                invoice.get("totals", {}).get("grandTotal")
-            )
+        elif record_type == "purchase":
             purchase_total += amount
 
-        status = payment_status(invoice)
+        # -------------------------------------------------
+        # PAYMENT STATUS
+        # -------------------------------------------------
 
+        status = payment_status(invoice)
+        due_date = parse_date(invoice.get("dueDate"))
+
+        # Derive overdue status for unpaid sales invoices.
+        if (
+            record_type == "sales"
+            and status != "paid"
+            and due_date
+            and due_date.date() < today
+        ):
+            status = "overdue"
+
+        # Count each invoice in exactly one category.
         if status == "paid":
             paid_count += 1
+        elif status == "overdue":
+            overdue_count += 1
         else:
             pending_count += 1
 
-        invoice_date = parse_date(
-            invoice.get("invoiceDate")
-        )
+        # -------------------------------------------------
+        # MONTHLY SALES AND PURCHASES
+        # -------------------------------------------------
+
+        invoice_date = parse_date(invoice.get("invoiceDate"))
 
         if invoice_date:
             key = month_key(invoice_date)
@@ -152,17 +182,15 @@ def get_dashboard(
             elif record_type == "purchase":
                 monthly_purchases[key] += amount
 
-        # Count overdue unpaid sales invoices.
-        if (
-            record_type == "sales"
-            and status != "paid"
-        ):
-            due_date = parse_date(
-                invoice.get("dueDate")
-            )
+        # -------------------------------------------------
+        # RECENT INVOICES
+        # -------------------------------------------------
 
-            if due_date and due_date.date() < today.date():
-                overdue_count += 1
+        party_name = (
+            invoice.get("customer", {}).get("name")
+            if record_type == "sales"
+            else invoice.get("vendor", {}).get("name")
+        )
 
         recent.append(
             {
@@ -172,17 +200,23 @@ def get_dashboard(
                     invoice.get("invoiceNumber") or "N/A"
                 ),
                 "invoiceDate": invoice.get("invoiceDate"),
-                "amount": amount,
+                "amount": round(amount, 2),
                 "paymentStatus": status,
-                "partyName": (
-                    invoice.get("customer", {}).get("name")
-                    if record_type == "sales"
-                    else invoice.get("vendor", {}).get("name")
-                ) or "N/A",
+                "partyName": party_name or "N/A",
             }
         )
 
+    # -----------------------------------------------------
+    # SUMMARY
+    # -----------------------------------------------------
+
+    # This is sales minus purchases, not full accounting
+    # net profit after all business expenses and adjustments.
     profit = sales_total - purchase_total
+
+    # -----------------------------------------------------
+    # LAST SIX CALENDAR MONTHS
+    # -----------------------------------------------------
 
     monthly = []
 
@@ -201,13 +235,21 @@ def get_dashboard(
             }
         )
 
+    # -----------------------------------------------------
+    # SORT MOST RECENT INVOICES FIRST
+    # -----------------------------------------------------
+
     recent.sort(
         key=lambda item: (
             parse_date(item.get("invoiceDate"))
             or datetime.min
         ),
-        reverse=True
+        reverse=True,
     )
+
+    # -----------------------------------------------------
+    # RESPONSE
+    # -----------------------------------------------------
 
     return {
         "summary": {

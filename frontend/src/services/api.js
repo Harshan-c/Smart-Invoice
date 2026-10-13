@@ -77,6 +77,7 @@ export async function uploadInvoice(file) {
 // SALES INVOICE
 // =========================================================
 
+
 export async function createInvoice(invoiceData) {
   const response = await fetch(`${API_URL}/api/invoices`, {
     method: 'POST',
@@ -87,11 +88,17 @@ export async function createInvoice(invoiceData) {
   const data = await response.json()
 
   if (!response.ok) {
-    throw new Error(data.detail || 'Failed to create invoice')
+    const error = new Error(
+      data.detail || 'Failed to create invoice'
+    )
+
+    error.status = response.status
+    throw error
   }
 
   return data
 }
+
 
 // =========================================================
 // GET COMPANY INVOICES

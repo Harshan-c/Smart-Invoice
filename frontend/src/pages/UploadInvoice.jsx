@@ -1,5 +1,5 @@
 import { useState } from 'react'
-
+import { useNavigate } from 'react-router-dom'
 import {
   uploadInvoice,
   savePurchaseInvoice
@@ -12,6 +12,8 @@ function UploadInvoice() {
 
   const [selectedFile, setSelectedFile] = useState(null)
 
+  const navigate = useNavigate()
+
   const [dragActive, setDragActive] = useState(false)
 
   const [uploading, setUploading] = useState(false)
@@ -20,78 +22,57 @@ function UploadInvoice() {
 
   const [saveSuccess, setSaveSuccess] = useState(false)
 
+  const [invoiceSaved, setInvoiceSaved] = useState(false)
+
+  const [saveError, setSaveError] = useState('')
+
   const [message, setMessage] = useState('')
 
   const [extractedData, setExtractedData] = useState(null)
 
-
-  function handleFileChange(event) {
-
-    const file = event.target.files?.[0]
-
-    if (!file) {
-      return
-    }
-
-    setSelectedFile(file)
-
+  function resetInvoiceState() {
     setExtractedData(null)
-
     setMessage('')
-
     setSaveSuccess(false)
+    setInvoiceSaved(false)
+    setSaveError('')
   }
 
+  function handleFileChange(event) {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    setSelectedFile(file)
+    resetInvoiceState()
+  }
 
   function handleDragOver(event) {
-
     event.preventDefault()
-
     setDragActive(true)
   }
 
-
   function handleDragLeave(event) {
-
     event.preventDefault()
-
     setDragActive(false)
   }
 
-
   function handleDrop(event) {
-
     event.preventDefault()
-
     setDragActive(false)
 
     const file = event.dataTransfer.files?.[0]
 
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     setSelectedFile(file)
-
-    setExtractedData(null)
-
-    setMessage('')
-
-    setSaveSuccess(false)
+    resetInvoiceState()
   }
-
 
   function removeFile() {
-
     setSelectedFile(null)
-
-    setExtractedData(null)
-
-    setMessage('')
-
-    setSaveSuccess(false)
+    resetInvoiceState()
   }
-
 
   async function handleUpload() {
 
@@ -133,39 +114,46 @@ function UploadInvoice() {
     }
   }
 
-
   async function handleSaveInvoice() {
-
-    if (!extractedData || saving) {
+    if (!extractedData || saving || invoiceSaved) {
       return
     }
 
     try {
-
       setSaving(true)
-
-      setMessage('Saving invoice to SmartInvoice...')
+      setMessage('')
+      setSaveError('')
+      setSaveSuccess(false)
 
       await savePurchaseInvoice(extractedData)
 
-      setSaving(false)
-
-      setMessage('')
-
+      setInvoiceSaved(true)
       setSaveSuccess(true)
-
+      setMessage('')
     } catch (error) {
+      console.error('Purchase invoice save error:', error)
 
-      console.error(error)
+      const errorMessage = (error.message || '').toLowerCase()
 
-      setMessage(
-        'Failed to save invoice to MongoDB.'
-      )
-
+      if (
+        error.status === 409 ||
+        errorMessage.includes('already exists') ||
+        errorMessage.includes('duplicate')
+      ) {
+        setSaveError(
+          `Purchase invoice number ${
+            extractedData.invoiceNumber || ''
+          } already exists for your company. Please change the invoice number and try again.`
+        )
+      } else {
+        setSaveError(
+          'The invoice could not be saved. Please check your details and try again.'
+        )
+      }
+    } finally {
       setSaving(false)
-    }
+   }
   }
-
 
   function handleExtractedChange(field, value) {
 
@@ -1291,17 +1279,15 @@ function UploadInvoice() {
 
               onClick={handleSaveInvoice}
 
-              disabled={saving}
+              disabled={saving || invoiceSaved}
 
             >
 
               {saving
-
                 ? 'Saving Invoice...'
-
-                : 'Save Invoice'
-
-              }
+                : invoiceSaved
+                  ? 'Invoice Saved'
+                    : 'Save Invoice'}
 
             </button>
 
@@ -1351,10 +1337,7 @@ function UploadInvoice() {
 
                 className="success-invoices-button"
 
-                onClick={() => {
-                  window.location.href = '/invoices'
-                }}
-
+                onClick={() => navigate('/invoices')}
               >
                 Go to Invoices
 
@@ -1385,6 +1368,42 @@ function UploadInvoice() {
         </div>
 
       )}
+
+      {/* =====================================================
+        SAVE ERROR POPUP
+    ===================================================== */}
+    {saveError && (
+      <div className="save-success-overlay">
+        <div
+          className="save-success-modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="purchase-save-error-title"
+        >
+          <div className="save-success-icon">
+            !
+          </div>
+
+          <h2 id="purchase-save-error-title">
+            {saveError.toLowerCase().includes('already exists') || saveError.toLowerCase().includes('duplicate')
+              ? 'Duplicate Invoice Number'
+              : 'Invoice Could Not Be Saved'}
+          </h2>
+
+          <p>{saveError}</p>
+
+          <div className="save-success-actions">
+            <button
+              type="button"
+              className="success-close-button"
+              onClick={() => setSaveError('')}
+            >
+              Change Invoice Details
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
 
 

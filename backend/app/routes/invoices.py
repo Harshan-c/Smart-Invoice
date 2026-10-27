@@ -1,5 +1,5 @@
 import os
-
+from datetime import date
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 from fastapi import (
@@ -91,6 +91,38 @@ def create_purchase_invoice(
     invoice_data["recordType"] = "purchase"
     invoice_data["companyId"] = company_id
 
+    # Normalize initial purchase payment details from the declared status.
+    total = round(float(invoice.totals.grandTotal or 0), 2)
+    submitted_payment = invoice.payment.model_dump() if invoice.payment else {}
+    mode = submitted_payment.get("mode") or invoice.paymentMode or "Cash"
+    status = str(submitted_payment.get("status") or "Pending")
+    if status not in {"Pending", "Paid", "Partially Paid"}:
+        raise HTTPException(status_code=400, detail="Invalid payment status for a new invoice.")
+
+    if status == "Paid":
+        amount_paid = total
+    elif status == "Pending":
+        amount_paid = 0.0
+    else:
+        try:
+            amount_paid = round(float(submitted_payment.get("amountPaid") or 0), 2)
+        except (TypeError, ValueError):
+            amount_paid = 0.0
+        if amount_paid <= 0 or amount_paid >= total:
+            raise HTTPException(
+                status_code=400,
+                detail="For a partially paid invoice, amount paid must be greater than zero and less than the grand total.",
+            )
+
+    invoice_data["paymentMode"] = mode
+    invoice_data["payment"] = {
+        "mode": mode,
+        "status": status,
+        "referenceNumber": submitted_payment.get("referenceNumber") or "",
+        "amountPaid": amount_paid,
+        "balanceDue": round(total - amount_paid, 2),
+    }
+
     try:
         result = invoices_collection.insert_one(invoice_data)
 
@@ -126,6 +158,32 @@ def create_invoice(
     invoice_data = invoice.model_dump()
     invoice_data["recordType"] = "sales"
     invoice_data["companyId"] = company_id
+
+    # Derive amount paid and balance due from the initial payment status.
+    total = round(float(invoice.totals.grandTotal or 0), 2)
+    submitted_payment = invoice.payment.model_dump()
+    status = str(submitted_payment.get("status") or "Pending")
+    if status not in {"Pending", "Paid", "Partially Paid"}:
+        raise HTTPException(status_code=400, detail="Invalid payment status for a new invoice.")
+
+    if status == "Paid":
+        amount_paid = total
+    elif status == "Pending":
+        amount_paid = 0.0
+    else:
+        try:
+            amount_paid = round(float(submitted_payment.get("amountPaid") or 0), 2)
+        except (TypeError, ValueError):
+            amount_paid = 0.0
+        if amount_paid <= 0 or amount_paid >= total:
+            raise HTTPException(
+                status_code=400,
+                detail="For a partially paid invoice, amount paid must be greater than zero and less than the grand total.",
+            )
+
+    invoice_data["payment"]["amountPaid"] = amount_paid
+    invoice_data["payment"]["balanceDue"] = round(total - amount_paid, 2)
+    invoice_data["payment"]["status"] = status
 
     try:
         result = invoices_collection.insert_one(invoice_data)
@@ -208,6 +266,7 @@ def get_invoice(
     return invoice
 
 
+
 # =========================================================
 # UPDATE INVOICE PAYMENT
 # =========================================================
@@ -229,9 +288,7 @@ def update_invoice_payment(
     invoice = invoices_collection.find_one({
         "_id": ObjectId(invoice_id),
         "companyId": company_id,
-        "recordType": {
-            "$in": ["sales", "purchase"]
-        },
+        "recordType": {"$in": ["sales", "purchase"]},
     })
 
     if invoice is None:
@@ -240,47 +297,96 @@ def update_invoice_payment(
             detail="Invoice not found",
         )
 
-    payment_data = payment.model_dump()
+    # Obtain the original invoice amount.
+    total = round(
+        float(invoice.get("totals", {}).get("grandTotal", 0) or 0),
+        2,
+    )
 
-    if invoice.get("recordType") == "purchase":
-        invoices_collection.update_one(
-            {
-                "_id": ObjectId(invoice_id),
-                "companyId": company_id,
-                "recordType": "purchase",
-            },
-            {
-                "$set": {
-                    "paymentMode": payment.mode,
-                    "payment": payment_data,
-                }
-            },
+    existing_payment = invoice.get("payment") or {}
+
+    # Support older invoices and older frontend requests.
+    if payment.amountPaid is not None:
+        amount_paid = round(float(payment.amountPaid), 2)
+    elif str(payment.status).lower() == "paid":
+        amount_paid = total
+    else:
+        amount_paid = round(
+            float(existing_payment.get("amountPaid", 0) or 0),
+            2,
         )
 
-        return {
-            "message": (
-                "Purchase payment details updated successfully"
-            ),
-            "invoice_id": invoice_id,
-        }
+    if amount_paid < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Amount paid cannot be negative.",
+        )
 
-    invoices_collection.update_one(
+    if amount_paid > total:
+        raise HTTPException(
+            status_code=400,
+            detail="Amount paid cannot exceed the invoice total.",
+        )
+
+    balance_due = round(total - amount_paid, 2)
+
+    # Determine whether the invoice is overdue.
+    due_date_value = invoice.get("dueDate")
+    is_overdue = False
+
+    if due_date_value:
+        try:
+            due_date = date.fromisoformat(str(due_date_value)[:10])
+            is_overdue = due_date < date.today()
+        except (ValueError, TypeError):
+            is_overdue = False
+
+    # Derive the status from the actual payment amount and due date.
+    if balance_due <= 0:
+        status = "Paid"
+    elif is_overdue:
+        status = "Overdue"
+    elif amount_paid > 0:
+        status = "Partially Paid"
+    else:
+        status = "Pending"
+
+    payment_data = payment.model_dump()
+    payment_data["amountPaid"] = amount_paid
+    payment_data["balanceDue"] = balance_due
+    payment_data["status"] = status
+
+    update_fields = {
+        "payment": payment_data,
+    }
+
+    if invoice.get("recordType") == "purchase":
+        update_fields["paymentMode"] = payment.mode
+
+    result = invoices_collection.update_one(
         {
             "_id": ObjectId(invoice_id),
             "companyId": company_id,
-            "recordType": "sales",
+            "recordType": invoice.get("recordType"),
         },
-        {
-            "$set": {
-                "payment": payment_data,
-            }
-        },
+        {"$set": update_fields},
     )
 
+    if result.matched_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Invoice not found.",
+        )
+
     return {
-        "message": "Payment details updated successfully",
+        "message": "Payment details updated successfully.",
         "invoice_id": invoice_id,
+        "totalAmount": total,
+        "amountPaid": amount_paid,
+        "balanceDue": balance_due,
+        "status": status,
     }
+
 
 
 # =========================================================

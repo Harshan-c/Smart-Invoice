@@ -56,6 +56,8 @@ function InvoiceGenerator() {
 
     paymentStatus: 'Pending',
 
+    amountPaid: '',
+
     referenceNumber: ''
 
   })
@@ -386,13 +388,21 @@ function InvoiceGenerator() {
 
 
       payment: {
-
         mode: invoice.paymentMode,
-
         status: invoice.paymentStatus,
-
-        referenceNumber: invoice.referenceNumber
-
+        referenceNumber: invoice.referenceNumber,
+        amountPaid:
+          invoice.paymentStatus === 'Paid'
+            ? totals.grandTotal
+            : invoice.paymentStatus === 'Pending'
+              ? 0
+              : Number(invoice.amountPaid) || 0,
+        balanceDue:
+          invoice.paymentStatus === 'Paid'
+            ? 0
+            : invoice.paymentStatus === 'Pending'
+              ? totals.grandTotal
+              : Math.max(0, totals.grandTotal - (Number(invoice.amountPaid) || 0))
       },
 
 
@@ -468,6 +478,16 @@ function InvoiceGenerator() {
         window.alert(`${field.label} is required.`)
         return
       } 
+    }
+
+    // Validate payment amount for partially paid invoices.
+    if (invoice.paymentStatus === 'Partially Paid') {
+      const totalForPayment = calculateTotals().grandTotal
+      const amountPaid = Number(invoice.amountPaid)
+      if (!Number.isFinite(amountPaid) || amountPaid <= 0 || amountPaid >= totalForPayment) {
+        window.alert('For a partially paid invoice, enter an amount greater than zero and less than the grand total.')
+        return
+      }
     }
 
     // Validate invoice items.
@@ -1414,14 +1434,32 @@ function InvoiceGenerator() {
                   Partially Paid
                 </option>
 
-                <option value="Overdue">
-                  Overdue
-                </option>
-
               </select>
 
             </div>
 
+            {invoice.paymentStatus === 'Partially Paid' && (
+              <div className="form-field">
+                <label>
+                  Amount Received
+                </label>
+                <input
+                  type="number"
+                  name="amountPaid"
+                  min="0"
+                  max={calculateTotals().grandTotal}
+                  step="0.01"
+                  value={invoice.amountPaid}
+                  onChange={handleInvoiceChange}
+                  required
+                />
+                <small>
+                  Balance Due: {formatCurrency(
+                    Math.max(0, calculateTotals().grandTotal - (Number(invoice.amountPaid) || 0))
+                  )}
+                </small>
+              </div>
+            )}
 
             <div className="form-field form-field-full">
 

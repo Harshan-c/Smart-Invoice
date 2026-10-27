@@ -1,47 +1,54 @@
+/* =========================================================
+   SMART INVOICE — SIDEBAR
+   ========================================================= */
 
 .sidebar {
-  width: 220px;
-  min-height: 100vh;
-
-  background: #152238;
-  color: white;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
 
   display: flex;
   flex-direction: column;
 
-  padding: 20px 12px;
+  width: 220px;
+  min-height: 100vh;
+  padding: 22px 14px;
 
+  overflow-y: auto;
+
+  background: #14263f;
+  color: #ffffff;
+
+  border-right: 1px solid rgb(255 255 255 / 6%);
   box-sizing: border-box;
-
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-
-  z-index: 100;
 }
 
+/* Brand */
 .sidebar-brand {
   display: flex;
   align-items: center;
+  gap: 11px;
 
-  gap: 10px;
+  padding: 0 8px 26px;
+  margin-bottom: 10px;
 
-  padding: 0 8px 24px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
 }
 
 .brand-icon {
-  width: 36px;
-  height: 42px;
-
-  background: white;
-  color: #2563eb;
-
-  border-radius: 7px;
-
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+
+  width: 38px;
+  height: 40px;
+
+  border-radius: 9px;
+  background: #ffffff;
+  color: #173b63;
 
   font-size: 22px;
 }
@@ -49,123 +56,157 @@
 .sidebar-brand h1 {
   margin: 0;
 
-  font-size: 19px;
+  color: #ffffff;
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .sidebar-brand p {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
 
+  color: #aebdd0;
   font-size: 11px;
-  color: #aebbd0;
+  line-height: 1.4;
 }
 
+/* Navigation */
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-
   gap: 5px;
+
+  padding-top: 12px;
 }
 
 .sidebar-link {
   display: flex;
   align-items: center;
+  gap: 12px;
 
-  gap: 13px;
+  min-height: 44px;
+  padding: 0 12px;
 
-  min-height: 43px;
+  border: 1px solid transparent;
+  border-radius: 8px;
 
-  padding: 0 13px;
-
-  border-radius: 9px;
-
-  color: #d3dbea;
-
+  color: #c7d2e2;
   text-decoration: none;
-
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
 
   transition:
     background 0.2s ease,
-    color 0.2s ease;
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
+  background: rgb(255 255 255 / 7%);
+  color: #ffffff;
 }
 
 .sidebar-link.active {
-  background: #3478ee;
-  color: white;
-
-  box-shadow:
-    0 5px 15px rgba(52, 120, 238, 0.25);
+  background: #214c70;
+  border-color: rgb(94 234 212 / 18%);
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 #42c4b3;
 }
 
 .sidebar-icon {
-  width: 20px;
-
   display: flex;
-  justify-content: center;
-
-  font-size: 17px;
-}
-
-.sidebar-bottom-card {
-  margin-top: auto;
-
-  margin-bottom: 4px;
-
-  min-height: 145px;
-
-  border-radius: 11px;
-
-  background:
-    linear-gradient(
-      145deg,
-      #1e3049,
-      #17263b
-    );
-
-  border: 1px solid rgba(
-    255,
-    255,
-    255,
-    0.07
-  );
-
-  display: flex;
-  flex-direction: column;
-
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+
+  width: 21px;
+
+  color: #a8bad0;
+  font-size: 18px;
+}
+
+.sidebar-link.active .sidebar-icon {
+  color: #71e0d0;
+}
+
+/* Bottom information card */
+.sidebar-bottom-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 140px;
+  margin-top: auto;
+  margin-bottom: 4px;
+  padding: 18px 10px;
+
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 11px;
+
+  background: linear-gradient(
+    145deg,
+    #203752,
+    #192c44
+  );
 
   text-align: center;
 }
 
 .sidebar-bottom-icon {
+  margin-bottom: 10px;
+
+  color: #70d9cb;
   font-size: 25px;
-
-  margin-bottom: 8px;
-
-  opacity: 0.75;
 }
 
 .sidebar-bottom-card p {
   margin: 0;
 
-  color: #d6dfed;
-
+  color: #d4deeb;
   font-size: 11px;
-
-  line-height: 1.5;
+  line-height: 1.7;
 }
 
 .sidebar-bottom-line {
   margin-top: 10px;
 
-  color: white;
-
+  color: #70d9cb;
   font-size: 13px;
+}
+
+/* Scrollbar */
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Responsive sizing */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-height: 600px) {
+  .sidebar {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .sidebar-brand {
+    padding-bottom: 16px;
+  }
+
+  .sidebar-bottom-card {
+    min-height: 110px;
+  }
 }

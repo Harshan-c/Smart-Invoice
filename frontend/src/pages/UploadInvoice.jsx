@@ -93,7 +93,15 @@ function UploadInvoice() {
 
       const data = await uploadInvoice(selectedFile)
 
-      setExtractedData(data.extracted_data || null)
+      setExtractedData(
+        data.extracted_data
+          ? {
+              ...data.extracted_data,
+              paymentStatus: 'Pending',
+              amountPaid: 0
+            }
+          : null
+      )
 
       setMessage(
         data.message ||
@@ -125,7 +133,34 @@ function UploadInvoice() {
       setSaveError('')
       setSaveSuccess(false)
 
-      await savePurchaseInvoice(extractedData)
+      const grandTotal = Number(extractedData.totals?.grandTotal) || 0
+      const paymentStatus = extractedData.paymentStatus || 'Pending'
+      const amountPaid =
+        paymentStatus === 'Paid'
+          ? grandTotal
+          : paymentStatus === 'Pending'
+            ? 0
+            : Number(extractedData.amountPaid) || 0
+
+      if (
+        paymentStatus === 'Partially Paid' &&
+        (amountPaid <= 0 || amountPaid >= grandTotal)
+      ) {
+        setSaveError(
+          'For a partially paid invoice, enter an amount greater than zero and less than the grand total.'
+        )
+        return
+      }
+
+      await savePurchaseInvoice({
+        ...extractedData,
+        payment: {
+          mode: extractedData.paymentMode || 'Cash',
+          status: paymentStatus,
+          referenceNumber: '',
+          amountPaid
+        }
+      })
 
       setInvoiceSaved(true)
       setSaveSuccess(true)
@@ -790,6 +825,19 @@ function UploadInvoice() {
 
             </div>
 
+            <div className="extracted-field">
+              <label>Payment Status</label>
+              <select
+                value={extractedData.paymentStatus || 'Pending'}
+                onChange={event =>
+                  handleExtractedChange('paymentStatus', event.target.value)
+                }
+              >
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+                <option value="Partially Paid">Partially Paid</option>
+              </select>
+            </div>
 
 
             {/* =================================================
@@ -1012,6 +1060,35 @@ function UploadInvoice() {
               />
 
             </div>
+
+            {extractedData.paymentStatus === 'Partially Paid' && (
+              <div className="extracted-field">
+                <label>Amount Paid</label>
+                <input
+                  type="number"
+                  min="0"
+                  max={Number(extractedData.totals?.grandTotal) || undefined}
+                  step="0.01"
+                  value={extractedData.amountPaid ?? ''}
+                  onChange={event =>
+                    handleExtractedChange(
+                      'amountPaid',
+                      event.target.value === '' ? '' : Number(event.target.value)
+                    )
+                  }
+                />
+                <small>
+                  Balance Due: ₹{Math.max(
+                    0,
+                    (Number(extractedData.totals?.grandTotal) || 0) -
+                    (Number(extractedData.amountPaid) || 0)
+                  ).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </small>
+              </div>
+            )}
 
           </div>
 

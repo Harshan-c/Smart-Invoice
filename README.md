@@ -3,3 +3,12 @@ SmartInvoice is an AI-powered invoice management and financial decision-support 
 
 Project Status
 🚧 Under Development
+
+frotend
+    cd frontend
+    npm run dev
+
+backend
+    cd backend
+    venv\Scripts\activate
+    python -m uvicorn app.main:app --reload

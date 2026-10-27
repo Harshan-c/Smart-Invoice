@@ -13,6 +13,7 @@ from app.routes.invoices import router as invoices_router
 from app.routes.vendors import router as vendors_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.companies import router as companies_router
+from app.routes.forecasting import router as forecasting_router
 
 
 @asynccontextmanager
@@ -51,6 +52,7 @@ app.include_router(invoices_router)
 app.include_router(vendors_router)
 app.include_router(dashboard_router)
 app.include_router(companies_router)
+app.include_router(forecasting_router)
 
 
 # =========================================================

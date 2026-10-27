@@ -11,6 +11,17 @@ import {
 import InvoicePreview from '../components/Invoice/InvoicePreview'
 import './InvoiceDetails.css'
 
+const currency = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
+function formatCurrency(value) {
+  return currency.format(Number(value || 0))
+}
+
 function InvoiceDetails() {
   const { invoiceId } = useParams()
   const navigate = useNavigate()
@@ -23,12 +34,15 @@ function InvoiceDetails() {
   const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
+    let mounted = true
+
     async function loadInvoice() {
       try {
         setLoading(true)
         setError('')
 
         const data = await getInvoice(invoiceId)
+
         let logo = ''
 
         try {
@@ -37,6 +51,8 @@ function InvoiceDetails() {
         } catch (profileError) {
           console.error('Could not load company logo:', profileError)
         }
+
+        if (!mounted) return
 
         setInvoice({
           ...data,
@@ -47,13 +63,22 @@ function InvoiceDetails() {
         })
       } catch (err) {
         console.error('Could not load invoice:', err)
-        setError('Failed to load invoice.')
+
+        if (mounted) {
+          setError(err.message || 'Failed to load invoice.')
+        }
       } finally {
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
     loadInvoice()
+
+    return () => {
+      mounted = false
+    }
   }, [invoiceId])
 
   async function handleDeleteInvoice() {
@@ -65,7 +90,9 @@ function InvoiceDetails() {
       navigate('/invoices')
     } catch (err) {
       console.error('Could not delete invoice:', err)
-      setDeleteError('Failed to delete invoice. Please try again.')
+      setDeleteError(
+        err.message || 'Failed to delete invoice. Please try again.'
+      )
       setDeleting(false)
     }
   }
@@ -83,6 +110,7 @@ function InvoiceDetails() {
       <div className="invoice-details-page">
         <h1>Invoice Details</h1>
         <p>{error || 'Invoice not found.'}</p>
+
         <Link to="/invoices" className="invoice-back-button">
           ← Back to Invoices
         </Link>
@@ -98,6 +126,56 @@ function InvoiceDetails() {
     ? '/invoices?type=purchase'
     : '/invoices?type=sales'
 
+  const invoiceTotal = Number(
+    invoice.totals?.grandTotal || 0
+  )
+
+  const savedAmountPaid = invoice.payment?.amountPaid
+
+  // Support older invoices that do not yet contain amountPaid.
+  const amountPaid =
+    savedAmountPaid !== undefined &&
+    savedAmountPaid !== null
+      ? Number(savedAmountPaid)
+      : String(invoice.payment?.status || '').toLowerCase() === 'paid'
+        ? invoiceTotal
+        : 0
+
+  const balanceDue = Math.max(
+    0,
+    Math.round((invoiceTotal - amountPaid) * 100) / 100
+  )
+
+  const dueDateText = invoice.dueDate
+    ? String(invoice.dueDate).slice(0, 10)
+    : ''
+
+  const dueDate = dueDateText
+    ? new Date(`${dueDateText}T00:00:00`)
+    : null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const isOverdue =
+    balanceDue > 0 &&
+    dueDate &&
+    !Number.isNaN(dueDate.getTime()) &&
+    dueDate < today
+
+  const paymentStatus =
+    balanceDue <= 0
+      ? 'Paid'
+      : isOverdue
+        ? 'Overdue'
+        : amountPaid > 0
+          ? 'Partially Paid'
+          : 'Pending'
+
+  const paymentStatusClass = paymentStatus
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+
   return (
     <div className="invoice-details-page">
       <div className="invoice-details-header">
@@ -107,14 +185,18 @@ function InvoiceDetails() {
           </Link>
 
           <h1>
-            {isPurchaseInvoice ? 'Purchase Invoice Details' : 'Invoice Details'}
+            {isPurchaseInvoice
+              ? 'Purchase Invoice Details'
+              : 'Invoice Details'}
           </h1>
 
           <p>View the complete details of this invoice.</p>
         </div>
 
         <div className="invoice-number-badge">
-          <span>{isPurchaseInvoice ? 'Purchase Invoice' : 'Invoice'}</span>
+          <span>
+            {isPurchaseInvoice ? 'Purchase Invoice' : 'Invoice'}
+          </span>
           <strong>{invoice.invoiceNumber || '--'}</strong>
         </div>
       </div>
@@ -164,7 +246,9 @@ function InvoiceDetails() {
 
           <p>This action cannot be undone.</p>
 
-          {deleteError && <p className="delete-error">{deleteError}</p>}
+          {deleteError && (
+            <p className="delete-error">{deleteError}</p>
+          )}
 
           <div className="delete-confirmation-actions">
             <button
@@ -187,6 +271,53 @@ function InvoiceDetails() {
           </div>
         </div>
       )}
+
+      {/* Payment summary for sales and purchase invoices */}
+      <section className="purchase-detail-card payment-summary-card">
+        <h2>Payment Summary</h2>
+
+        <div className="purchase-detail-grid">
+          <div className="purchase-detail-item">
+            <span>Invoice Total</span>
+            <strong>{formatCurrency(invoiceTotal)}</strong>
+          </div>
+
+          <div className="purchase-detail-item">
+            <span>Amount Paid</span>
+            <strong>{formatCurrency(amountPaid)}</strong>
+          </div>
+
+          <div className="purchase-detail-item">
+            <span>Outstanding Balance</span>
+            <strong>{formatCurrency(balanceDue)}</strong>
+          </div>
+
+          <div className="purchase-detail-item">
+            <span>Payment Status</span>
+            <strong
+              className={`payment-status ${paymentStatusClass}`}
+            >
+              {paymentStatus}
+            </strong>
+          </div>
+
+          <div className="purchase-detail-item">
+            <span>Payment Mode</span>
+            <strong>
+              {invoice.paymentMode ||
+                invoice.payment?.mode ||
+                '--'}
+            </strong>
+          </div>
+
+          <div className="purchase-detail-item">
+            <span>Reference Number</span>
+            <strong>
+              {invoice.payment?.referenceNumber || '--'}
+            </strong>
+          </div>
+        </div>
+      </section>
 
       {isPurchaseInvoice ? (
         <div className="purchase-invoice-details">
@@ -216,7 +347,11 @@ function InvoiceDetails() {
 
               <div className="purchase-detail-item">
                 <span>Payment Mode</span>
-                <strong>{invoice.paymentMode || invoice.payment?.mode || '--'}</strong>
+                <strong>
+                  {invoice.paymentMode ||
+                    invoice.payment?.mode ||
+                    '--'}
+                </strong>
               </div>
             </div>
           </section>
@@ -294,7 +429,10 @@ function InvoiceDetails() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="7" className="purchase-items-empty">
+                      <td
+                        colSpan="7"
+                        className="purchase-items-empty"
+                      >
                         No purchase items available.
                       </td>
                     </tr>
@@ -306,19 +444,18 @@ function InvoiceDetails() {
 
           <section className="purchase-detail-card purchase-total-card">
             <h2>Invoice Total</h2>
+
             <div className="purchase-grand-total">
               <span>Grand Total</span>
-              <strong>
-                ₹{Number(invoice.totals?.grandTotal || 0).toLocaleString(
-                  'en-IN',
-                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                )}
-              </strong>
+              <strong>{formatCurrency(invoiceTotal)}</strong>
             </div>
           </section>
         </div>
       ) : (
-        <div id="invoice-print-area" className="invoice-details-preview">
+        <div
+          id="invoice-print-area"
+          className="invoice-details-preview"
+        >
           <InvoicePreview invoice={invoice} />
         </div>
       )}

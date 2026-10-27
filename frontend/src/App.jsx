@@ -15,7 +15,7 @@ import UpdatePayment from './pages/UpdatePayment'
 import Vendors from './pages/Vendors'
 import Login from './pages/Login'
 import CompanyProfile from './pages/CompanyProfile'
-
+import Analytics from './pages/Analytics'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
@@ -51,6 +51,11 @@ function App() {
             <Route
               path="/vendors"
               element={<Vendors />}
+            />
+
+            <Route
+              path="/analytics"
+              element={<Analytics />}
             />
 
             <Route

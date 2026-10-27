@@ -359,3 +359,28 @@ export async function companyLogin(loginData) {
 
   return data
 }
+
+
+ // =========================================================
+ // AI/ML FORECASTING
+ // =========================================================
+
+export async function getForecast() {
+  const response = await fetch(`${API_URL}/api/forecasting`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const message =
+      typeof data.detail === 'string'
+        ? data.detail
+        : data.detail?.message || 'Failed to load forecasting data'
+
+    throw new Error(message)
+  }
+
+  return data
+}

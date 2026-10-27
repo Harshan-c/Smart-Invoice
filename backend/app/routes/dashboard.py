@@ -114,7 +114,7 @@ def get_dashboard(
             }
         )
     )
-
+    
     sales_total = 0.0
     purchase_total = 0.0
 
@@ -161,12 +161,13 @@ def get_dashboard(
             status = "overdue"
 
         # Count each invoice in exactly one category.
-        if status == "paid":
-            paid_count += 1
-        elif status == "overdue":
-            overdue_count += 1
-        else:
-            pending_count += 1
+        if record_type == "sales":
+            if status == "paid":
+                paid_count += 1
+            elif status == "overdue":
+                overdue_count += 1
+            else:
+                pending_count += 1
 
         # -------------------------------------------------
         # MONTHLY SALES AND PURCHASES

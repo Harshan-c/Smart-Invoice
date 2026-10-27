@@ -1,47 +1,61 @@
-.dashboard-layout {
-  width: 100%;
-  min-height: 100vh;
-
-  background: #f5f8fc;
-}
-
-.dashboard-main {
-  width: calc(100% - 220px);
-
-  margin-left: 220px;
-
-  min-height: 100vh;
-
-  background: #f5f8fc;
-
-  box-sizing: border-box;
-}
-
-.dashboard-content {
-  width: 100%;
-
-  padding: 26px 28px;
-
-  box-sizing: border-box;
-}
-
-
 /* =========================================================
-   MOBILE
+   SMART INVOICE — DASHBOARD LAYOUT
    ========================================================= */
 
-@media (max-width: 900px) {
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--color-background, #f5f7fb);
+}
 
+/* Main area beside the fixed sidebar */
+.dashboard-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  width: calc(100% - 220px);
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: 220px;
+
+  background: var(--color-background, #f5f7fb);
+}
+
+/* Main page content */
+.dashboard-content {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+
+  padding: 28px 32px;
+
+  box-sizing: border-box;
+}
+
+/* Medium screens */
+@media (max-width: 1100px) {
+  .dashboard-content {
+    padding: 24px;
+  }
+}
+
+/* Mobile and tablet layout */
+@media (max-width: 900px) {
   .dashboard-main {
     width: 100%;
-
     margin-left: 0;
   }
 
   .dashboard-content {
     padding: 20px;
   }
-
 }
 
-
+/* Small mobile screens */
+@media (max-width: 480px) {
+  .dashboard-content {
+    padding: 14px;
+  }
+}

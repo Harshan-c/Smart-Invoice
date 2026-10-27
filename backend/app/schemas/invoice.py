@@ -105,9 +105,10 @@ class InvoiceItem(BaseModel):
 
 
 class Payment(BaseModel):
-    mode: str
-    status: str
-    referenceNumber: str
+    mode: str = Field(min_length=1)
+    status: str = "Pending"
+    referenceNumber: str = ""
+    amountPaid: float | None = Field(default=None, ge=0)
 
 
 class InvoiceTotals(BaseModel):

@@ -27,6 +27,13 @@ class PurchaseTotals(BaseModel):
     grandTotal: Optional[float] = None
 
 
+class PurchasePayment(BaseModel):
+    mode: Optional[str] = None
+    status: str = "Pending"
+    referenceNumber: str = ""
+    amountPaid: Optional[float] = None
+
+
 class PurchaseInvoiceCreate(BaseModel):
     invoiceType: str = "purchase"
     invoiceNumber: Optional[str] = None
@@ -35,5 +42,6 @@ class PurchaseInvoiceCreate(BaseModel):
     orderDate: Optional[str] = None
     vendor: PurchaseVendor
     paymentMode: Optional[str] = None
+    payment: Optional[PurchasePayment] = None
     items: List[PurchaseItem] = []
     totals: PurchaseTotals

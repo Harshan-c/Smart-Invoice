@@ -12,7 +12,7 @@ function InvoiceGenerator() {
 
   const [invoice, setInvoice] = useState({
 
-    invoiceNumber: 'INV-00001',
+    invoiceNumber: '',
 
     invoiceDate: '',
 
@@ -456,10 +456,6 @@ function InvoiceGenerator() {
     // Validate required invoice fields.
     const requiredFields = [
       {
-        value: invoice.invoiceNumber,
-        label: 'Invoice number'
-      },
-      {
         value: invoice.invoiceDate,
         label: 'Invoice date'
       },
@@ -478,6 +474,59 @@ function InvoiceGenerator() {
         window.alert(`${field.label} is required.`)
         return
       } 
+    }
+
+    // Validate date formats and date order before submitting to the API.
+    // A date input returns YYYY-MM-DD. Validate its calendar components
+    // without comparing toISOString(), which can shift the day across time zones.
+    const isValidIsoDate = value => {
+      if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false
+      }
+
+      const [year, month, day] = value.split('-').map(Number)
+      const parsed = new Date(Date.UTC(year, month - 1, day))
+
+      return parsed.getUTCFullYear() === year &&
+        parsed.getUTCMonth() === month - 1 &&
+        parsed.getUTCDate() === day
+    }
+
+    if (!isValidIsoDate(invoice.invoiceDate)) {
+      window.alert('Enter a valid invoice date.')
+      return
+    }
+
+    if (invoice.dueDate) {
+      if (!isValidIsoDate(invoice.dueDate)) {
+        window.alert('Enter a valid due date.')
+        return
+      }
+      if (invoice.dueDate < invoice.invoiceDate) {
+        window.alert('Due date cannot be earlier than invoice date.')
+        return
+      }
+    }
+
+    if (invoice.orderDate && !isValidIsoDate(invoice.orderDate)) {
+      window.alert('Enter a valid order date.')
+      return
+    }
+
+    const calculatedTotals = calculateTotals()
+    const totalValues = [
+      calculatedTotals.subtotal,
+      calculatedTotals.discount,
+      calculatedTotals.taxableAmount,
+      calculatedTotals.cgst,
+      calculatedTotals.sgst,
+      calculatedTotals.igst,
+      calculatedTotals.totalGST,
+      calculatedTotals.grandTotal
+    ]
+    if (totalValues.some(value => !Number.isFinite(value) || value < 0)) {
+      window.alert('Invoice totals contain an invalid amount. Check the item quantities, rates, and discounts.')
+      return
     }
 
     // Validate payment amount for partially paid invoices.
@@ -509,6 +558,15 @@ function InvoiceGenerator() {
       const rate = Number(item.rate)
       const discount = Number(item.discount)
       const gstRate = Number(item.gstRate)
+      const grossAmount = quantity * rate
+      const taxableAmount = grossAmount - discount
+      const gstAmount = taxableAmount * (gstRate / 100)
+      const itemTotal = taxableAmount + gstAmount
+
+      if (![grossAmount, taxableAmount, gstAmount, itemTotal].every(Number.isFinite)) {
+        window.alert(`Calculated amounts for item ${itemNumber} are invalid. Check quantity, rate, and discount.`)
+        return
+      }
 
       if (!Number.isFinite(quantity) || quantity <= 0) {
         window.alert(`Quantity for item ${itemNumber} must be greater than zero.`)
@@ -543,9 +601,12 @@ function InvoiceGenerator() {
       const invoiceData = buildInvoiceData()
       const data = await createInvoice(invoiceData)
 
-      setSavedInvoiceNumber(
-        data.invoice_number || invoiceData.invoiceNumber
-      )
+      const generatedInvoiceNumber = data.invoice_number || ''
+      setSavedInvoiceNumber(generatedInvoiceNumber)
+      setInvoice(previous => ({
+        ...previous,
+        invoiceNumber: generatedInvoiceNumber
+      }))
 
       setSaveStatus('success')
     } catch (error) {
@@ -802,15 +863,19 @@ function InvoiceGenerator() {
             <div className="form-field">
 
               <label>
-                Invoice Number
+                Invoice Number (Automatic)
               </label>
 
               <input
                 name="invoiceNumber"
-                placeholder="INV-00001"
+                placeholder="Generated when saved"
                 value={invoice.invoiceNumber}
-                onChange={handleInvoiceChange}
+                readOnly
+                aria-describedby="invoice-number-help"
               />
+              <small id="invoice-number-help">
+                Smart Invoice assigns the next number when you save this invoice.
+              </small>
 
             </div>
 
@@ -1735,7 +1800,7 @@ function InvoiceGenerator() {
               <button
                 type="button"
                 className="invoice-save-primary"
-                onClick={() => setSaveStatus(null)}
+                onClick={handleSaveInvoice}
               >
                 Try Again
               </button>
@@ -1761,25 +1826,20 @@ function InvoiceGenerator() {
             </div>
 
             <h3 id="duplicate-invoice-title">
-              Duplicate Invoice Number
+              Invoice Number Conflict
             </h3>
 
-            <p> 
-              Invoice number {invoice.invoiceNumber} already exists
-              for your company.
-            </p>
-
             <p>
-              Please enter a different invoice number and try again.
+              Smart Invoice could not reserve a unique invoice number. Please try saving again.
             </p>
 
             <div className="invoice-save-actions">
               <button
                 type="button"
                 className="invoice-save-primary"
-                onClick={() => setSaveStatus(null)}
+                onClick={handleSaveInvoice}
               >
-                Change Invoice Number
+                Try Again
               </button>
             </div>
           </div>
@@ -1878,7 +1938,7 @@ function InvoiceGenerator() {
               </strong>
 
               <span>
-                {invoice.invoiceNumber || '--'}
+                {invoice.invoiceNumber || 'Assigned on save'}
               </span>
 
             </div>

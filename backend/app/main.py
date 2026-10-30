@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import (
     database,
     ensure_invoice_indexes,
+    ensure_forecast_evaluation_indexes,
 )
 
 from app.routes.invoices import router as invoices_router
@@ -20,6 +21,7 @@ from app.routes.forecasting import router as forecasting_router
 async def lifespan(app: FastAPI):
     # Create the invoice uniqueness index at startup.
     ensure_invoice_indexes()
+    ensure_forecast_evaluation_indexes()
     yield
 
 

@@ -1,6 +1,13 @@
 
 from typing import List
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 
 ALLOWED_GST_RATES = {0, 5, 12, 18, 28}
@@ -86,7 +93,9 @@ class InvoiceItem(BaseModel):
         expected_taxable = expected_gross - self.discount
 
         if abs(self.grossAmount - expected_gross) > 0.02:
-            raise ValueError("Gross amount does not match quantity × rate")
+            raise ValueError(
+                "Gross amount does not match quantity × rate"
+            )
 
         if abs(self.taxableAmount - expected_taxable) > 0.02:
             raise ValueError(
@@ -96,10 +105,14 @@ class InvoiceItem(BaseModel):
         expected_gst = expected_taxable * self.gstRate / 100
 
         if abs(self.gstAmount - expected_gst) > 0.02:
-            raise ValueError("GST amount does not match taxable amount and GST rate")
+            raise ValueError(
+                "GST amount does not match taxable amount and GST rate"
+            )
 
         if abs(self.total - (expected_taxable + expected_gst)) > 0.02:
-            raise ValueError("Item total does not match taxable amount plus GST")
+            raise ValueError(
+                "Item total does not match taxable amount plus GST"
+            )
 
         return self
 
@@ -129,7 +142,9 @@ class InvoiceTotals(BaseModel):
 class InvoiceCreate(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
 
-    invoiceNumber: str = Field(min_length=1)
+    # Backend generates the actual sales invoice number.
+    invoiceNumber: str = ""
+
     invoiceDate: str = Field(min_length=1)
     dueDate: str
     orderNumber: str
@@ -143,20 +158,34 @@ class InvoiceCreate(BaseModel):
     payment: Payment
     totals: InvoiceTotals
 
-    @field_validator("invoiceNumber", "invoiceDate")
+    @field_validator("invoiceDate")
     @classmethod
     def validate_required_text(cls, value):
         if not value.strip():
-            raise ValueError("This field cannot be empty")
+            raise ValueError("Invoice date cannot be empty")
         return value.strip()
 
     @model_validator(mode="after")
     def validate_invoice_totals(self):
-        item_subtotal = sum(item.grossAmount for item in self.items)
-        item_discount = sum(item.discount for item in self.items)
-        item_taxable = sum(item.taxableAmount for item in self.items)
-        item_gst = sum(item.gstAmount for item in self.items)
-        item_total = sum(item.total for item in self.items)
+        item_subtotal = sum(
+            item.grossAmount for item in self.items
+        )
+
+        item_discount = sum(
+            item.discount for item in self.items
+        )
+
+        item_taxable = sum(
+            item.taxableAmount for item in self.items
+        )
+
+        item_gst = sum(
+            item.gstAmount for item in self.items
+        )
+
+        item_total = sum(
+            item.total for item in self.items
+        )
 
         checks = [
             ("Subtotal", self.totals.subtotal, item_subtotal),
@@ -173,7 +202,9 @@ class InvoiceCreate(BaseModel):
                 )
 
         if abs(
-            self.totals.cgst + self.totals.sgst + self.totals.igst
+            self.totals.cgst
+            + self.totals.sgst
+            + self.totals.igst
             - self.totals.totalGST
         ) > 0.05:
             raise ValueError(

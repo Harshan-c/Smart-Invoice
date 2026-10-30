@@ -6,7 +6,7 @@ import pandas as pd
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
-DATA_FILE = PROJECT_ROOT / "data" / "processed" / "online_retail_cleaned.csv"
+DATA_FILE = PROJECT_ROOT / "data" / "processed" / "indian_synthetic_invoice_lines.csv"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "processed"
 MONTHLY_FILE = OUTPUT_DIR / "monthly_sales.csv"
 FORECAST_FILE = OUTPUT_DIR / "sales_forecast.csv"
@@ -128,8 +128,8 @@ def predict_models(monthly, train_end, test_size=TEST_SIZE):
 def main():
     if not DATA_FILE.exists():
         raise FileNotFoundError(
-            f"Cleaned dataset not found: {DATA_FILE}. "
-            "Run clean_dataset.py first."
+            f"Synthetic Indian invoice dataset not found: {DATA_FILE}. "
+            "Run generate_indian_synthetic_invoices.py first."
         )
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

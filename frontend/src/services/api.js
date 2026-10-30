@@ -384,3 +384,49 @@ export async function getForecast() {
 
   return data
 }
+
+export async function getCompanyForecast() {
+  const response = await fetch(`${API_URL}/api/forecasting/company`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message =
+      typeof data.detail === 'string'
+        ? data.detail
+        : data.detail?.message || 'Failed to load company sales forecast';
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+
+export async function getCompanyForecastEvaluations() {
+  const response = await fetch(
+    `${API_URL}/api/forecasting/company/evaluations`,
+    {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    }
+  )
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const message =
+      typeof data.detail === 'string'
+        ? data.detail
+        : data.detail?.message ||
+          'Failed to load company forecast evaluations'
+
+    throw new Error(message)
+  }
+
+  return data
+}
+

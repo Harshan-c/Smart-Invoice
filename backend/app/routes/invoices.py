@@ -1,5 +1,6 @@
+import math
 import os
-from datetime import date
+from datetime import date, datetime
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 from fastapi import (
@@ -10,7 +11,10 @@ from fastapi import (
     UploadFile,
 )
 
-from app.database.connection import invoices_collection
+from app.database.connection import (
+    invoices_collection,
+    get_next_sales_invoice_number,
+)
 from app.schemas.invoice import InvoiceCreate, Payment
 from app.schemas.purchase_invoice import PurchaseInvoiceCreate
 from app.ocr.paddle_ocr import extract_text
@@ -22,6 +26,55 @@ router = APIRouter(
     prefix="/api",
     tags=["Invoices"],
 )
+
+
+def _normalize_invoice_date(value, field_name, required=False):
+    """Accept ISO dates and common OCR date formats, returning ISO YYYY-MM-DD."""
+    raw = str(value or "").strip()
+    if not raw:
+        if required:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{field_name} is required.",
+            )
+        return ""
+
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(raw, fmt).date().isoformat()
+        except (ValueError, TypeError):
+            continue
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"{field_name} must be a valid date (YYYY-MM-DD or DD-MM-YYYY).",
+    )
+
+
+def validate_invoice_dates(invoice):
+    """Normalize dates from forms/OCR before validating and storing them."""
+    invoice_date = _normalize_invoice_date(
+        getattr(invoice, "invoiceDate", ""), "Invoice date", required=True
+    )
+    due_date = _normalize_invoice_date(
+        getattr(invoice, "dueDate", ""), "Due date"
+    )
+    order_date = _normalize_invoice_date(
+        getattr(invoice, "orderDate", ""), "Order date"
+    )
+
+    # Persist normalized ISO strings so sorting and comparisons stay reliable.
+    invoice.invoiceDate = invoice_date
+    if hasattr(invoice, "dueDate"):
+        invoice.dueDate = due_date
+    if hasattr(invoice, "orderDate"):
+        invoice.orderDate = order_date
+
+    if due_date and due_date < invoice_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Due date cannot be earlier than invoice date.",
+        )
 
 
 # =========================================================
@@ -86,6 +139,7 @@ def create_purchase_invoice(
     company: dict = Depends(get_current_company),
 ):
     company_id = company["_id"]
+    validate_invoice_dates(invoice)
 
     invoice_data = invoice.model_dump()
     invoice_data["recordType"] = "purchase"
@@ -154,6 +208,7 @@ def create_invoice(
     company: dict = Depends(get_current_company),
 ):
     company_id = company["_id"]
+    validate_invoice_dates(invoice)
 
     invoice_data = invoice.model_dump()
     invoice_data["recordType"] = "sales"
@@ -185,6 +240,10 @@ def create_invoice(
     invoice_data["payment"]["balanceDue"] = round(total - amount_paid, 2)
     invoice_data["payment"]["status"] = status
 
+    # Never trust a client-supplied sales number; allocate it atomically only
+    # after request validation has passed.
+    invoice_data["invoiceNumber"] = get_next_sales_invoice_number(company_id)
+
     try:
         result = invoices_collection.insert_one(invoice_data)
 
@@ -200,7 +259,7 @@ def create_invoice(
     return {
         "message": "Invoice saved successfully",
         "invoice_id": str(result.inserted_id),
-        "invoice_number": invoice.invoiceNumber,
+        "invoice_number": invoice_data["invoiceNumber"],
         "grand_total": invoice.totals.grandTotal,
     }
 
@@ -314,6 +373,18 @@ def update_invoice_payment(
         amount_paid = round(
             float(existing_payment.get("amountPaid", 0) or 0),
             2,
+        )
+
+    if not math.isfinite(amount_paid):
+        raise HTTPException(
+            status_code=400,
+            detail="Amount paid must be a finite number.",
+        )
+
+    if not math.isfinite(total) or total < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Invoice total is invalid; payment cannot be updated.",
         )
 
     if amount_paid < 0:

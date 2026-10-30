@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getDashboard, getForecast } from '../services/api'
+import { getDashboard, getForecast, getCompanyForecast, getCompanyForecastEvaluations } from '../services/api'
 import './Analytics.css'
 
 const currency = new Intl.NumberFormat('en-IN', {
@@ -12,10 +12,10 @@ function formatCurrency(value) {
   return currency.format(Number(value || 0))
 }
 
-// The experimental dataset is UK retail data, so do not format it as INR.
-const forecastCurrency = new Intl.NumberFormat('en-GB', {
+// Synthetic Indian invoice dataset values are expressed in INR.
+const forecastCurrency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
-  currency: 'GBP',
+  currency: 'INR',
   maximumFractionDigits: 2,
 })
 
@@ -57,6 +57,12 @@ function Analytics() {
   const [experimentalForecast, setExperimentalForecast] = useState(null)
   const [forecastLoading, setForecastLoading] = useState(true)
   const [forecastError, setForecastError] = useState('')
+  const [companyForecast, setCompanyForecast] = useState(null)
+  const [companyForecastLoading, setCompanyForecastLoading] = useState(true)
+  const [companyForecastError, setCompanyForecastError] = useState('')
+  const [forecastEvaluations, setForecastEvaluations] = useState(null)
+  const [evaluationsLoading, setEvaluationsLoading] = useState(true)
+  const [evaluationsError, setEvaluationsError] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -109,6 +115,64 @@ function Analytics() {
     }
 
     loadExperimentalForecast()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Load the authenticated company's forecast separately from the synthetic
+  // research forecast. The backend returns ready=false when invoice history
+  // is insufficient, so the UI can explain why a forecast is unavailable.
+  useEffect(() => {
+    let mounted = true
+
+    async function loadCompanyForecast() {
+      try {
+        const data = await getCompanyForecast()
+        if (mounted) {
+          setCompanyForecast(data)
+          setCompanyForecastError('')
+        }
+      } catch (err) {
+        if (mounted) {
+          setCompanyForecastError(
+            err.message || 'Unable to load your company sales forecast.'
+          )
+        }
+      } finally {
+        if (mounted) setCompanyForecastLoading(false)
+      }
+    }
+
+    loadCompanyForecast()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Load saved forecast snapshots and real-world evaluation metrics independently.
+  useEffect(() => {
+    let mounted = true
+
+    async function loadForecastEvaluations() {
+      try {
+        const data = await getCompanyForecastEvaluations()
+        if (mounted) {
+          setForecastEvaluations(data)
+          setEvaluationsError('')
+        }
+      } catch (err) {
+        if (mounted) {
+          setEvaluationsError(
+            err.message || 'Unable to load forecast evaluation history.'
+          )
+        }
+      } finally {
+        if (mounted) setEvaluationsLoading(false)
+      }
+    }
+
+    loadForecastEvaluations()
     return () => {
       mounted = false
     }
@@ -707,14 +771,281 @@ function Analytics() {
         )}
       </section>
 
+      {/* Company-specific forecast — sourced only from this company's sales invoices */}
+      <section className="analytics-panel" style={{ marginBottom: 23 }}>
+        <div className="analytics-panel-heading">
+          <div>
+            <h2>Your Company Sales Forecast</h2>
+            <p>
+              Based on sales invoices belonging to your logged-in company in MongoDB.
+            </p>
+          </div>
+          {companyForecast?.ready && companyForecast?.selectedModel && (
+            <span className="analytics-record-count">
+              Model: {String(companyForecast.selectedModel).replaceAll('_', ' ')}
+            </span>
+          )}
+        </div>
+
+        {companyForecastLoading ? (
+          <div className="analytics-empty-chart">Loading your company sales forecast...</div>
+        ) : companyForecastError ? (
+          <div className="analytics-empty-chart">
+            <p>{companyForecastError}</p>
+            <p>Other company analytics remain available above.</p>
+          </div>
+        ) : companyForecast?.ready ? (
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 16,
+              }}
+            >
+              <article style={{ minWidth: 0, padding: 16, border: '1px solid #e4eaf1', borderRadius: 10, background: '#fbfcfe' }}>
+                <p style={{ margin: '0 0 10px', color: '#728197', fontSize: 12, fontWeight: 650 }}>Forecast Month</p>
+                <strong style={{ display: 'block', fontSize: 20, lineHeight: 1.4, overflowWrap: 'anywhere' }}>
+                  {companyForecast.forecastMonth || '—'}
+                </strong>
+              </article>
+              <article style={{ minWidth: 0, padding: 16, border: '1px solid #e4eaf1', borderRadius: 10, background: '#fbfcfe' }}>
+                <p style={{ margin: '0 0 10px', color: '#728197', fontSize: 12, fontWeight: 650 }}>Estimated Sales</p>
+                <strong style={{ display: 'block', color: '#168b82', fontSize: 20, lineHeight: 1.4, overflowWrap: 'anywhere' }}>
+                  {formatCurrency(companyForecast.nextMonthSalesEstimate)}
+                </strong>
+              </article>
+              <article style={{ minWidth: 0, padding: 16, border: '1px solid #e4eaf1', borderRadius: 10, background: '#fbfcfe' }}>
+                <p style={{ margin: '0 0 10px', color: '#728197', fontSize: 12, fontWeight: 650 }}>Sales Invoices</p>
+                <strong style={{ display: 'block', fontSize: 20, lineHeight: 1.4, overflowWrap: 'anywhere' }}>
+                  {formatNumber(companyForecast.invoiceCount)}
+                </strong>
+                <p style={{ margin: '6px 0 0', color: '#728197', fontSize: 11 }}>
+                  {formatNumber(companyForecast.activeSalesMonths)} month(s) with sales
+                </p>
+              </article>
+            </div>
+
+            {Array.isArray(companyForecast.history) && companyForecast.history.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Your Monthly Sales History</h3>
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead><tr><th>Month</th><th>Sales</th></tr></thead>
+                    <tbody>
+                      {companyForecast.history.slice(-6).map((item, index) => (
+                        <tr key={`${item.month || index}`}>
+                          <td>{item.month || '—'}</td>
+                          <td>{formatCurrency(item.sales)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(companyForecast.metrics) && companyForecast.metrics.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Company Forecast Backtesting (MAE)</h3>
+                <p style={{ margin: '0 0 12px', color: '#728197', fontSize: 12, lineHeight: 1.7 }}>
+                  MAE shows the average absolute difference between historical predictions and actual sales. Lower values indicate smaller errors on the tested months; this does not guarantee future accuracy.
+                </p>
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Model</th>
+                        <th>Mean Absolute Error</th>
+                        <th>Test Months</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {companyForecast.metrics.map((metric, index) => (
+                        <tr key={`${metric.model || 'model'}-${index}`}>
+                          <td>{String(metric.model || 'Model').replaceAll('_', ' ')}</td>
+                          <td>{metric.meanAbsoluteError == null ? '—' : formatCurrency(metric.meanAbsoluteError)}</td>
+                          <td>{formatNumber(metric.backtestMonths)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(companyForecast.holdout) && companyForecast.holdout.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Actual vs. Predicted Company Sales</h3>
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Month</th>
+                        <th>Actual Sales</th>
+                        <th>Predicted Sales</th>
+                        <th>Absolute Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {companyForecast.holdout.map((item, index) => (
+                        <tr key={`${item.month || 'month'}-${index}`}>
+                          <td>{item.month || '—'}</td>
+                          <td>{formatCurrency(item.actualSales)}</td>
+                          <td>{formatCurrency(item.predictedSales)}</td>
+                          <td>{formatCurrency(item.absoluteError)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <p className="analytics-note">
+              {companyForecast.message || 'This estimate uses only your company sales invoices. It is an estimate, not a guarantee of future sales.'}
+            </p>
+          </>
+        ) : (
+          <div className="analytics-empty-chart">
+            <p>{companyForecast?.message || 'A company-specific forecast is not available yet.'}</p>
+            <p>
+              Available sales invoices: {formatNumber(companyForecast?.invoiceCount)}.
+              {' '}Calendar months of history: {formatNumber(companyForecast?.monthsOfHistory)}.
+              {' '}Months with sales: {formatNumber(companyForecast?.activeSalesMonths)}.
+            </p>
+            <p className="analytics-note">
+              Company-specific MAE and actual-versus-predicted results will appear when enough history is available and the backend returns backtesting results. Synthetic research metrics are not used as a substitute.
+            </p>
+            {Array.isArray(companyForecast?.history) && companyForecast.history.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Available Monthly Sales History</h3>
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead><tr><th>Month</th><th>Sales</th></tr></thead>
+                    <tbody>
+                      {companyForecast.history.slice(-6).map((item, index) => (
+                        <tr key={`${item.month || index}`}>
+                          <td>{item.month || '—'}</td>
+                          <td>{formatCurrency(item.sales)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Saved company forecast snapshots and real-world evaluation */}
+      <section className="analytics-panel analytics-evaluation-panel" style={{ marginBottom: 23 }}>
+        <div className="analytics-panel-heading">
+          <div>
+            <h2>Company Forecast Evaluation History</h2>
+            <p>Original forecasts compared with completed months of your company's actual sales.</p>
+          </div>
+          <span className="analytics-record-count">
+            {formatNumber(forecastEvaluations?.evaluatedForecastCount || 0)} evaluated
+          </span>
+        </div>
+
+        {evaluationsLoading ? (
+          <div className="analytics-empty-chart">Loading forecast evaluation history...</div>
+        ) : evaluationsError ? (
+          <div className="analytics-empty-chart">
+            <p>{evaluationsError}</p>
+            <p>Check that GET /api/forecasting/company/evaluations is registered and that your session is authorized.</p>
+          </div>
+        ) : (
+          <>
+            <div className="analytics-evaluation-summary">
+              <article>
+                <span>Saved forecasts</span>
+                <strong>{formatNumber(forecastEvaluations?.evaluations?.length || 0)}</strong>
+              </article>
+              <article>
+                <span>Completed evaluations</span>
+                <strong>{formatNumber(forecastEvaluations?.evaluatedForecastCount || 0)}</strong>
+              </article>
+              <article>
+                <span>Real-world MAE</span>
+                <strong>
+                  {forecastEvaluations?.realWorldMeanAbsoluteError == null
+                    ? 'Not available yet'
+                    : formatCurrency(forecastEvaluations.realWorldMeanAbsoluteError)}
+                </strong>
+              </article>
+            </div>
+
+            {Array.isArray(forecastEvaluations?.evaluations) &&
+            forecastEvaluations.evaluations.length > 0 ? (
+              <div className="analytics-table-wrapper" style={{ marginTop: 18 }}>
+                <table className="analytics-table analytics-evaluation-table">
+                  <thead>
+                    <tr>
+                      <th>Forecast Month</th>
+                      <th>Forecast Created</th>
+                      <th>Predicted Sales</th>
+                      <th>Actual Sales</th>
+                      <th>Absolute Error</th>
+                      <th>Selected Model</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {forecastEvaluations.evaluations.map((item, index) => {
+                      const evaluated = item.absoluteError != null
+                      return (
+                        <tr key={`${item.forecastMonth || 'forecast'}-${index}`}>
+                          <td className="analytics-invoice-number">{item.forecastMonth || '—'}</td>
+                          <td>{formatDate(item.forecastCreatedAt)}</td>
+                          <td className="analytics-amount">{formatCurrency(item.predictedSales)}</td>
+                          <td className="analytics-amount">
+                            {item.actualSales == null ? 'Pending month end' : formatCurrency(item.actualSales)}
+                          </td>
+                          <td className="analytics-amount">
+                            {item.absoluteError == null ? '—' : formatCurrency(item.absoluteError)}
+                          </td>
+                          <td>{String(item.selectedModel || '—').replaceAll('_', ' ')}</td>
+                          <td>
+                            <span className={`analytics-status-badge ${evaluated ? 'paid' : 'pending'}`}>
+                              {evaluated ? 'Evaluated' : 'Awaiting actuals'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="analytics-empty-records analytics-evaluation-empty">
+                <h3>No company forecasts saved yet</h3>
+                <p>
+                  This history will populate after your company has enough real sales history to generate a forecast.
+                  Forecasts are saved once per company and forecast month, then evaluated after that month ends.
+                </p>
+              </div>
+            )}
+
+            <p className="analytics-note">
+              {forecastEvaluations?.note ||
+                'Real-world MAE is calculated only from saved forecasts whose target months have ended. Synthetic research data is not included.'}
+            </p>
+          </>
+        )}
+      </section>
+
       {/* Baseline financial forecast */}
       <section className="analytics-panel" style={{ marginBottom: 23 }}>
         <div className="analytics-panel-heading">
           <div>
-            <h2>Estimated Next-Month Forecast</h2>
+            <h2>Simple Baseline Estimate</h2>
             <p>
-              Simple average of the latest {forecast?.basedOn || 0} available
-              month(s), based on recorded sales and purchases
+              A basic comparison estimate using the latest {forecast?.basedOn || 0} available
+              dashboard month(s), not the company-specific ML forecast
             </p>
           </div>
         </div>
@@ -769,10 +1100,7 @@ function Analytics() {
               ))}
             </div>
             <p className="analytics-note">
-              This is a basic baseline estimate, not an AI/ML prediction or a
-              guarantee of future performance. Actual results may differ, and
-              the estimate can be less reliable when only a few months of data
-              are available.
+              This is a simple arithmetic-average baseline calculated from the dashboard's recent monthly values. It is not the company-specific forecasting model, is not a validated prediction, and should not be treated as a guarantee of future performance.
             </p>
           </>
         ) : (
@@ -786,17 +1114,25 @@ function Analytics() {
       <section className="analytics-panel" style={{ marginBottom: 23 }}>
         <div className="analytics-panel-heading">
           <div>
-            <h2>Experimental Sales Forecast (Research Dataset)</h2>
+            <h2>Experimental Sales Forecast (Synthetic Indian Invoice Dataset)</h2>
             <p>
-              Forecast generated from the UCI Online Retail II dataset, not from
-              your company's MongoDB invoices.
+              Forecast generated from simulated Indian invoice records, not from your company's MongoDB invoices.
             </p>
           </div>
-          {experimentalForecast?.selectedModel && (
-            <span className="analytics-record-count">
-              Model: {String(experimentalForecast.selectedModel).replaceAll('_', ' ')}
-            </span>
-          )}
+          <div className="analytics-research-labels">
+            {experimentalForecast?.selectedModel && (
+              <span className="analytics-record-count">
+                Model: {String(experimentalForecast.selectedModel).replaceAll('_', ' ')}
+              </span>
+            )}
+            {experimentalForecast?.forecastStatus && (
+              <span className={`analytics-forecast-status ${experimentalForecast.forecastStatus === 'historical_research_estimate' ? 'historical' : 'future'}`}>
+                {experimentalForecast.forecastStatus === 'historical_research_estimate'
+                  ? 'Historical research estimate'
+                  : 'Future research estimate'}
+              </span>
+            )}
+          </div>
         </div>
 
         {forecastLoading ? (
@@ -828,21 +1164,30 @@ function Analytics() {
                 </strong>
               </article>
               <article style={{ minWidth: 0, padding: 16, border: '1px solid #e4eaf1', borderRadius: 10, background: '#fbfcfe' }}>
-                <p style={{ margin: '0 0 10px', color: '#728197', fontSize: 12, fontWeight: 650 }}>Selected Model</p>
+                <p style={{ margin: '0 0 10px', color: '#728197', fontSize: 12, fontWeight: 650 }}>Dataset Through</p>
                 <strong style={{ display: 'block', fontSize: 20, lineHeight: 1.4, overflowWrap: 'anywhere' }}>
-                  {String(experimentalForecast.selectedModel || '—').replaceAll('_', ' ')}
+                  {experimentalForecast.datasetThroughMonth || '—'}
                 </strong>
               </article>
             </div>
 
-            {Array.isArray(experimentalForecast.metrics) && experimentalForecast.metrics.length > 0 && (
+            <p className="analytics-note">
+              This is a static research result from simulated data. It is not a live forecast and does not use your company's MongoDB invoices.
+              {experimentalForecast.finalHoldoutPeriod ? ` Final holdout period: ${experimentalForecast.finalHoldoutPeriod}.` : ''}
+            </p>
+
+            {Array.isArray(experimentalForecast.rollingValidationMetrics || experimentalForecast.metrics) &&
+              (experimentalForecast.rollingValidationMetrics || experimentalForecast.metrics).length > 0 && (
               <div style={{ marginTop: 20 }}>
-                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Model Backtesting (MAE)</h3>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Rolling Validation MAE</h3>
+                <p className="analytics-note" style={{ marginTop: 0, marginBottom: 12 }}>
+                  Models are compared across rolling validation windows in the development data. Lower MAE means smaller average absolute errors on those validation windows.
+                </p>
                 <div className="analytics-table-wrapper">
                   <table className="analytics-table">
                     <thead><tr><th>Model</th><th>Mean Absolute Error</th></tr></thead>
                     <tbody>
-                      {experimentalForecast.metrics.map((metric, index) => {
+                      {(experimentalForecast.rollingValidationMetrics || experimentalForecast.metrics).map((metric, index) => {
                         const modelName = metric.model || metric.Model || metric.name || 'Model'
                         const mae = metric.meanAbsoluteError ?? metric.meanMAE ?? metric.mean_mae ?? metric.MAE ?? metric.mae ?? metric.AbsoluteError
                         return (
@@ -852,6 +1197,28 @@ function Analytics() {
                           </tr>
                         )
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(experimentalForecast.finalHoldoutMetrics) && experimentalForecast.finalHoldoutMetrics.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Final Holdout MAE</h3>
+                <p className="analytics-note" style={{ marginTop: 0, marginBottom: 12 }}>
+                  These results use the separate final holdout period and should be read independently from rolling validation. The best holdout model may differ from the selected model.
+                </p>
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead><tr><th>Model</th><th>Mean Absolute Error</th></tr></thead>
+                    <tbody>
+                      {experimentalForecast.finalHoldoutMetrics.map((metric, index) => (
+                        <tr key={`${metric.model || 'model'}-${index}`}>
+                          <td>{String(metric.model || 'Model').replaceAll('_', ' ')}</td>
+                          <td>{metric.meanAbsoluteError == null ? '—' : formatForecastCurrency(metric.meanAbsoluteError)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -878,7 +1245,7 @@ function Analytics() {
             )}
 
             <p className="analytics-note">
-              {experimentalForecast.currencyNote || 'Values are from a historical UK retail research dataset and are not your company’s actual revenue, profit, or a guarantee of future performance.'}
+              {experimentalForecast.currencyNote || 'Synthetic demonstration data in INR (taxable sales before GST). It is not your company’s actual revenue and does not prove real-world forecast accuracy.'}
             </p>
           </>
         ) : (

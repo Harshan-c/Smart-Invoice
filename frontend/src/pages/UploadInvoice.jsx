@@ -38,13 +38,35 @@ function UploadInvoice() {
     setSaveError('')
   }
 
-  function handleFileChange(event) {
-    const file = event.target.files?.[0]
+  const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+  const ALLOWED_UPLOAD_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
+  const ALLOWED_UPLOAD_EXTENSIONS = /\.(pdf|jpe?g|png)$/i
 
+  function acceptSelectedFile(file) {
     if (!file) return
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      resetInvoiceState()
+      setSelectedFile(null)
+      setMessage('File is too large. Maximum upload size is 10 MB.')
+      return
+    }
+
+    if (!ALLOWED_UPLOAD_TYPES.has(file.type) || !ALLOWED_UPLOAD_EXTENSIONS.test(file.name)) {
+      resetInvoiceState()
+      setSelectedFile(null)
+      setMessage('Unsupported file type. Please select a PDF, JPG, JPEG, or PNG invoice.')
+      return
+    }
 
     setSelectedFile(file)
     resetInvoiceState()
+  }
+
+  function handleFileChange(event) {
+    acceptSelectedFile(event.target.files?.[0])
+    // Allow selecting the same file again after removing or rejecting it.
+    event.target.value = ''
   }
 
   function handleDragOver(event) {
@@ -62,11 +84,7 @@ function UploadInvoice() {
     setDragActive(false)
 
     const file = event.dataTransfer.files?.[0]
-
-    if (!file) return
-
-    setSelectedFile(file)
-    resetInvoiceState()
+    acceptSelectedFile(file)
   }
 
   function removeFile() {
@@ -373,7 +391,7 @@ function UploadInvoice() {
 
               type="file"
 
-              accept="image/*,.pdf"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
 
               onChange={handleFileChange}
 
